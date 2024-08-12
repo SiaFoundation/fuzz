@@ -203,44 +203,51 @@ func (f *Fuzzer) randTxn(height uint64, addr types.Address) (types.Transaction, 
 	host := f.accs[f.randAddr(types.VoidAddress)]
 	{
 		if f.prob(probFC) {
-			fc := prepareContractFormation(renter.PK.PublicKey(), host.PK.PublicKey(), f.randSC(), f.randSC(), f.cm.Tip().Height+1, f.cm.Tip().Height+1+uint64(f.rng.Intn(maxContractExpire)), addr)
+			windowStart := f.cm.Tip().Height + 1 + uint64(f.rng.Intn(maxContractExpire))
+			windowEnd := windowStart + 1 + uint64(f.rng.Intn(maxContractExpire))
+			fc := prepareContractFormation(renter.PK.PublicKey(), host.PK.PublicKey(), f.randSC(), f.randSC(), windowStart, windowEnd, addr)
 			txn.FileContracts = append(txn.FileContracts, fc)
 		}
 	}
 	{
-		if len(f.contracts) > 0 && f.prob(probReviseFC) {
+		if f.prob(probReviseFC) {
 			var fces []types.FileContractElement
 			for _, fce := range f.contracts {
+				// we can't revise after proof window has opened
+				if height >= fce.FileContract.WindowStart {
+					continue
+				}
 				fces = append(fces, fce)
 			}
 			sort.Slice(fces, func(i, j int) bool {
 				return fces[i].ID.String() > fces[j].ID.String()
 			})
+			if len(fces) > 0 {
+				fc := fces[f.rng.Intn(len(fces))]
+				fc.FileContract.RevisionNumber++
+				fc.FileContract.WindowStart = height + 1 + uint64(f.rng.Intn(maxContractExpire))
+				fc.FileContract.WindowEnd = fc.FileContract.WindowStart + 1 + uint64(f.rng.Intn(maxContractExpire))
 
-			fc := fces[f.rng.Intn(len(fces))]
-			fc.FileContract.RevisionNumber++
-			fc.FileContract.WindowStart = height + 10
-			fc.FileContract.WindowEnd = fc.FileContract.WindowStart + 10 + uint64(f.rng.Intn(maxContractExpire))
+				addrs := f.contractAddresses[types.FileContractID(fc.ID)]
+				renterPubKey := f.accs[addrs.Renter].PK.PublicKey()
+				hostPubKey := f.accs[addrs.Host].PK.PublicKey()
 
-			addrs := f.contractAddresses[types.FileContractID(fc.ID)]
-			renterPubKey := f.accs[addrs.Renter].PK.PublicKey()
-			hostPubKey := f.accs[addrs.Host].PK.PublicKey()
+				uc := types.UnlockConditions{
+					PublicKeys: []types.UnlockKey{
+						{Algorithm: types.SpecifierEd25519, Key: renterPubKey[:]},
+						{Algorithm: types.SpecifierEd25519, Key: hostPubKey[:]},
+					},
+					SignaturesRequired: 2,
+				}
+				txn.FileContractRevisions = append(txn.FileContractRevisions, types.FileContractRevision{
+					ParentID:         types.FileContractID(fc.ID),
+					UnlockConditions: uc,
+					FileContract:     fc.FileContract,
+				})
 
-			uc := types.UnlockConditions{
-				PublicKeys: []types.UnlockKey{
-					{Algorithm: types.SpecifierEd25519, Key: renterPubKey[:]},
-					{Algorithm: types.SpecifierEd25519, Key: hostPubKey[:]},
-				},
-				SignaturesRequired: 2,
+				// don't revise again in same block
+				delete(f.contracts, types.FileContractID(fc.ID))
 			}
-			txn.FileContractRevisions = append(txn.FileContractRevisions, types.FileContractRevision{
-				ParentID:         types.FileContractID(fc.ID),
-				UnlockConditions: uc,
-				FileContract:     fc.FileContract,
-			})
-
-			// don't revise again in same block
-			delete(f.contracts, types.FileContractID(fc.ID))
 		}
 	}
 	{
