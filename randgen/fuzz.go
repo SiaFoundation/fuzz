@@ -56,8 +56,9 @@ func (a *Account) Balance() (sc types.Currency, sf uint64) {
 }
 
 type prevState struct {
-	State consensus.State
-	Accs  map[types.Address]Account
+	State     consensus.State
+	Accs      map[types.Address]Account
+	Contracts map[types.FileContractID]types.FileContractElement
 }
 
 type ContractAddresses struct {
@@ -386,15 +387,14 @@ func (f *Fuzzer) Run(iterations int) {
 	f.applyUpdates(crus, caus)
 
 	for i := 0; i < iterations; i++ {
-		// if len(f.prevs) > maxReorgSize && f.rng.Float64() < probReorg {
 		if len(f.prevs) > 0 && f.prob(probReorg) {
-			// cpy, err := deep.Copy(f.prevs[len(f.prevs)-1-f.rng.Intn(maxReorgSize)])
 			cpy, err := deep.Copy(f.prevs[f.rng.Intn(len(f.prevs))])
 			if err != nil {
 				panic(err)
 			}
 			state := cpy.State
 			f.accs = cpy.Accs
+			f.contracts = cpy.Contracts
 
 			var blocks []types.Block
 			extra := f.cm.Tip().Height - state.Index.Height + 1
@@ -409,7 +409,7 @@ func (f *Fuzzer) Run(iterations int) {
 			f.applyBlocks(blocks)
 			// log.Println("AFTER:", f.cm.Tip())
 		} else {
-			cpy, err := deep.Copy(prevState{f.cm.TipState(), f.accs})
+			cpy, err := deep.Copy(prevState{f.cm.TipState(), f.accs, f.contracts})
 			if err != nil {
 				panic(err)
 			}
