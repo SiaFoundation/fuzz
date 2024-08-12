@@ -14,13 +14,13 @@ import (
 )
 
 const (
-	probReorg       = 0.0
+	probReorg       = 0.5
 	probTransaction = 0.5
 
 	probSC       = 0.0
 	probSF       = 0.0
-	probFC       = 0.3
-	probReviseFC = 0.3
+	probFC       = 1.0
+	probReviseFC = 1.0
 	probMinerFee = 0.0
 )
 

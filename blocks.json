@@ -1,0 +1,874 @@
+[
+  {
+    "parentID": "bid:56839e8ff5582bd6d5c401483e3d5942af8c9eecabd85d97691d4b688fa062ce",
+    "nonce": 0,
+    "timestamp": "2021-04-10T01:53:09-04:00",
+    "minerPayouts": [
+      {
+        "value": "300000000000000000000000000000",
+        "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+      }
+    ],
+    "transactions": [
+      {
+        "siacoinInputs": [
+          {
+            "parentID": "scoid:272db0ca0b656e4c4b0fb445580d38014c02eea09741d62234be02c9da5ef0e2",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:4ab1a628bada81de8628beac4d815b0b6cbe12e32fc31585af5e68382a05fa54"
+              ],
+              "signaturesRequired": 1
+            }
+          }
+        ],
+        "siacoinOutputs": [
+          {
+            "value": "99999999999999999999999997",
+            "address": "addr:b8905efb7a6178d42acbbf704d45f0b71304711db8c9cd373e702323ef4d06cdaede473df5d7"
+          }
+        ],
+        "fileContracts": [
+          {
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 8,
+            "windowEnd": 28,
+            "payout": "3",
+            "validProofOutputs": [
+              {
+                "value": "2",
+                "address": "addr:b8905efb7a6178d42acbbf704d45f0b71304711db8c9cd373e702323ef4d06cdaede473df5d7"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "2",
+                "address": "addr:b8905efb7a6178d42acbbf704d45f0b71304711db8c9cd373e702323ef4d06cdaede473df5d7"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:d17a7bcca342c993b859647d6dae1fffc047d09736f6f8bcebf004aae59cce21",
+            "revisionNumber": 0
+          }
+        ],
+        "signatures": [
+          {
+            "parentID": "h:272db0ca0b656e4c4b0fb445580d38014c02eea09741d62234be02c9da5ef0e2",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "H/Ki8HTSKkx0/DxkQPJ6adXkoPJ5ui4fhFzbSwW+Y7KF+Ub9askckWqh4zu6ZaRksX7nKCeDJIMSpd+sdYUUBQ=="
+          }
+        ]
+      },
+      {
+        "siacoinInputs": [
+          {
+            "parentID": "scoid:d756f5199aa90c5e37b0b1fca5e1e428a6782b3bef601b00cf9b33ac001531bc",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:eca8c5eaf4e6106aed6d5addfe16b36f1bfe3aa41c1ceae43205780d8e3ad191"
+              ],
+              "signaturesRequired": 1
+            }
+          }
+        ],
+        "siacoinOutputs": [
+          {
+            "value": "99999999999999999999999996",
+            "address": "addr:3c811d4ec74bcd0a4a18906b34adf57e6aef160ed4dc72fe2de5a09605be648d5db373e6a6ce"
+          }
+        ],
+        "fileContracts": [
+          {
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 11,
+            "windowEnd": 37,
+            "payout": "4",
+            "validProofOutputs": [
+              {
+                "value": "1",
+                "address": "addr:3c811d4ec74bcd0a4a18906b34adf57e6aef160ed4dc72fe2de5a09605be648d5db373e6a6ce"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "1",
+                "address": "addr:3c811d4ec74bcd0a4a18906b34adf57e6aef160ed4dc72fe2de5a09605be648d5db373e6a6ce"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:29efee1527b195aa52df3b4dad04aa9488337022e5378c3220e6339775ad5f4a",
+            "revisionNumber": 0
+          }
+        ],
+        "signatures": [
+          {
+            "parentID": "h:d756f5199aa90c5e37b0b1fca5e1e428a6782b3bef601b00cf9b33ac001531bc",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "I8fZ9LJoe+LXXM12uaMmg+pohFM0/x/bB1A1nRdurHlUjmvW8hT6Iv5w2GvcSKMCDjYrVzN0wQ7QebvMUinXDw=="
+          }
+        ]
+      },
+      {
+        "siacoinInputs": [
+          {
+            "parentID": "scoid:360020fa900225b5dde13f17f2702bf9156a824c59fffd236c32a7755b988bcc",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:e15be2cd7644fe5efbc149aad9edf7f4bf53b9fce1053f788687e1e0c73f790f"
+              ],
+              "signaturesRequired": 1
+            }
+          }
+        ],
+        "siacoinOutputs": [
+          {
+            "value": "99999999999999999999999997",
+            "address": "addr:ee3f61c555138062cda82ab4371ae65eb938e6765b33d4daeaf26424b2607add9dbc9160e93f"
+          }
+        ],
+        "fileContracts": [
+          {
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 1,
+            "windowEnd": 8,
+            "payout": "3",
+            "validProofOutputs": [
+              {
+                "value": "2",
+                "address": "addr:ee3f61c555138062cda82ab4371ae65eb938e6765b33d4daeaf26424b2607add9dbc9160e93f"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "2",
+                "address": "addr:ee3f61c555138062cda82ab4371ae65eb938e6765b33d4daeaf26424b2607add9dbc9160e93f"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:29efee1527b195aa52df3b4dad04aa9488337022e5378c3220e6339775ad5f4a",
+            "revisionNumber": 0
+          }
+        ],
+        "signatures": [
+          {
+            "parentID": "h:360020fa900225b5dde13f17f2702bf9156a824c59fffd236c32a7755b988bcc",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "Ht72wU5b84qqu8g2yOb51fP0Rj50m1r06DK9ZfRNvJUiSN8Vo2Os6g9GQIWfonfXq+5ZrRJR+q2Ut7xGiNUuAQ=="
+          }
+        ]
+      },
+      {
+        "siacoinInputs": [
+          {
+            "parentID": "scoid:195fd14e462744ba4e7bb3ac3a620d325ba7337269a0af689d029ef5330b7335",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:fa40c18417310beb3fda897443204b487641f05491ee0a1be5f1b00dcba4a134"
+              ],
+              "signaturesRequired": 1
+            }
+          }
+        ],
+        "siacoinOutputs": [
+          {
+            "value": "99999999999999999999999996",
+            "address": "addr:6669ea63ef3740dd788a6ff8014dae96da2ca37e3620cc9e633d5468df78d19b142334bf150b"
+          }
+        ],
+        "fileContracts": [
+          {
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 17,
+            "windowEnd": 37,
+            "payout": "4",
+            "validProofOutputs": [
+              {
+                "value": "3",
+                "address": "addr:6669ea63ef3740dd788a6ff8014dae96da2ca37e3620cc9e633d5468df78d19b142334bf150b"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "3",
+                "address": "addr:6669ea63ef3740dd788a6ff8014dae96da2ca37e3620cc9e633d5468df78d19b142334bf150b"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:29efee1527b195aa52df3b4dad04aa9488337022e5378c3220e6339775ad5f4a",
+            "revisionNumber": 0
+          }
+        ],
+        "signatures": [
+          {
+            "parentID": "h:195fd14e462744ba4e7bb3ac3a620d325ba7337269a0af689d029ef5330b7335",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "t4OvGyxUMncWWIjpBePylSz5ImHMO5rOSesju4IaCb0zUCCjMVlsZo42IOM0ksTXyns6faf+Y/3lQQgEYf+NAg=="
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "parentID": "bid:0a71723c5abe6e6be0958c00c1fe8b65877ce3ff546679109c59741f788b63d8",
+    "nonce": 0,
+    "timestamp": "2021-04-10T01:53:10-04:00",
+    "minerPayouts": [
+      {
+        "value": "300000000000000000000000000000",
+        "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+      }
+    ],
+    "transactions": [
+      {
+        "siacoinInputs": [
+          {
+            "parentID": "scoid:2f160a694868b38a102f3b81d6f62c7e8c911a7c67996931aa814c565b7716a2",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:fa40c18417310beb3fda897443204b487641f05491ee0a1be5f1b00dcba4a134"
+              ],
+              "signaturesRequired": 1
+            }
+          }
+        ],
+        "siacoinOutputs": [
+          {
+            "value": "99999999999999999999999992",
+            "address": "addr:6669ea63ef3740dd788a6ff8014dae96da2ca37e3620cc9e633d5468df78d19b142334bf150b"
+          }
+        ],
+        "fileContracts": [
+          {
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 4,
+            "windowEnd": 27,
+            "payout": "4",
+            "validProofOutputs": [
+              {
+                "value": "1",
+                "address": "addr:6669ea63ef3740dd788a6ff8014dae96da2ca37e3620cc9e633d5468df78d19b142334bf150b"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "1",
+                "address": "addr:6669ea63ef3740dd788a6ff8014dae96da2ca37e3620cc9e633d5468df78d19b142334bf150b"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:29efee1527b195aa52df3b4dad04aa9488337022e5378c3220e6339775ad5f4a",
+            "revisionNumber": 0
+          }
+        ],
+        "fileContractRevisions": [
+          {
+            "parentID": "fcid:cdfb1a7c8388ab3cdc04315a386e6fe2186234237d3c776acc85f4c9b26335df",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:eca8c5eaf4e6106aed6d5addfe16b36f1bfe3aa41c1ceae43205780d8e3ad191",
+                "ed25519:4ab1a628bada81de8628beac4d815b0b6cbe12e32fc31585af5e68382a05fa54"
+              ],
+              "signaturesRequired": 2
+            },
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 5,
+            "windowEnd": 18,
+            "validProofOutputs": [
+              {
+                "value": "2",
+                "address": "addr:b8905efb7a6178d42acbbf704d45f0b71304711db8c9cd373e702323ef4d06cdaede473df5d7"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "2",
+                "address": "addr:b8905efb7a6178d42acbbf704d45f0b71304711db8c9cd373e702323ef4d06cdaede473df5d7"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:d17a7bcca342c993b859647d6dae1fffc047d09736f6f8bcebf004aae59cce21",
+            "revisionNumber": 1
+          }
+        ],
+        "signatures": [
+          {
+            "parentID": "h:2f160a694868b38a102f3b81d6f62c7e8c911a7c67996931aa814c565b7716a2",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "9z8mwX09mVYO7yMMTtZIKV229GdYSUhmRdAKiT73mcf6xKItslObsZiDVoIuQ+/cMWO7W3Irr0sNiVcD7ZJbDg=="
+          },
+          {
+            "parentID": "h:cdfb1a7c8388ab3cdc04315a386e6fe2186234237d3c776acc85f4c9b26335df",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "myZaHQ8f5Vn/7TWbndf1xielv9+y5Pr/pO6IcPe0neqRV+b2rlhXDvCAYUOEmsnmh7nOOdJ2XyLRtnfBDqdZAQ=="
+          },
+          {
+            "parentID": "h:cdfb1a7c8388ab3cdc04315a386e6fe2186234237d3c776acc85f4c9b26335df",
+            "publicKeyIndex": 1,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "A+Cq0Qy95LJOHGZVWlB7PWCGFirRw5jYQsufLkqKhVKBsG+RDrEiz6AeAJamvltNVO2INqQgRKscAkFHvgOLCQ=="
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "parentID": "bid:0a71723c5abe6e6be0958c00c1fe8b65877ce3ff546679109c59741f788b63d8",
+    "nonce": 0,
+    "timestamp": "2021-04-10T01:53:11-04:00",
+    "minerPayouts": [
+      {
+        "value": "300000000000000000000000000000",
+        "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+      }
+    ],
+    "transactions": [
+      {
+        "siacoinInputs": [
+          {
+            "parentID": "scoid:028e76269573ef396fe7412f0ac0f60ad910b9bba5def18d2b6e5a9a5bbbbc59",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:6f1581709bb7b1ef030d210db18e3b0ba1c776fba65d8cdaad05415142d189f8"
+              ],
+              "signaturesRequired": 1
+            }
+          }
+        ],
+        "siacoinOutputs": [
+          {
+            "value": "99999999999999999999999996",
+            "address": "addr:57413b064537c7675ae5dd2456604596d497da62961c18da36dfdbaf39e9d86cacfba6d24c1c"
+          }
+        ],
+        "fileContracts": [
+          {
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 20,
+            "windowEnd": 48,
+            "payout": "4",
+            "validProofOutputs": [
+              {
+                "value": "1",
+                "address": "addr:57413b064537c7675ae5dd2456604596d497da62961c18da36dfdbaf39e9d86cacfba6d24c1c"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "1",
+                "address": "addr:57413b064537c7675ae5dd2456604596d497da62961c18da36dfdbaf39e9d86cacfba6d24c1c"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:657ef0a61417646322e1e033555089ca6fd10b0994f5f2708f232dff99171cfa",
+            "revisionNumber": 0
+          }
+        ],
+        "fileContractRevisions": [
+          {
+            "parentID": "fcid:cdfb1a7c8388ab3cdc04315a386e6fe2186234237d3c776acc85f4c9b26335df",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:eca8c5eaf4e6106aed6d5addfe16b36f1bfe3aa41c1ceae43205780d8e3ad191",
+                "ed25519:4ab1a628bada81de8628beac4d815b0b6cbe12e32fc31585af5e68382a05fa54"
+              ],
+              "signaturesRequired": 2
+            },
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 14,
+            "windowEnd": 33,
+            "validProofOutputs": [
+              {
+                "value": "2",
+                "address": "addr:b8905efb7a6178d42acbbf704d45f0b71304711db8c9cd373e702323ef4d06cdaede473df5d7"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "2",
+                "address": "addr:b8905efb7a6178d42acbbf704d45f0b71304711db8c9cd373e702323ef4d06cdaede473df5d7"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:d17a7bcca342c993b859647d6dae1fffc047d09736f6f8bcebf004aae59cce21",
+            "revisionNumber": 1
+          }
+        ],
+        "signatures": [
+          {
+            "parentID": "h:028e76269573ef396fe7412f0ac0f60ad910b9bba5def18d2b6e5a9a5bbbbc59",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "WF4e90foS7OSn6J71ZLlyVwdoUs7NqHogw8nRbuWmM/BMIFrpkY/b/Pf9bicSZ6lNZwv7ZrG9AQMpAxgim1cDQ=="
+          },
+          {
+            "parentID": "h:cdfb1a7c8388ab3cdc04315a386e6fe2186234237d3c776acc85f4c9b26335df",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "+D7E62cOEN03vMbm36VtsYG4hwTkTm3KrnM/TrIZGVh1esWKGFTYEEL/JDghEIF2bLZweBrc4W26djzrpiy1CA=="
+          },
+          {
+            "parentID": "h:cdfb1a7c8388ab3cdc04315a386e6fe2186234237d3c776acc85f4c9b26335df",
+            "publicKeyIndex": 1,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "vX1MU+dO3YnnzuSZElrDY7XCJDlwOKn0IhhQmr0YN2zL8EkBzDU+HcTHnLet4CkfkMFbij8DfeLkkKjRJDmDCg=="
+          }
+        ]
+      },
+      {
+        "siacoinInputs": [
+          {
+            "parentID": "scoid:911fef7b207d5892cd6618abde2bc4f9f4736e87d56be5b274a9f1b477e08a64",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:4ab1a628bada81de8628beac4d815b0b6cbe12e32fc31585af5e68382a05fa54"
+              ],
+              "signaturesRequired": 1
+            }
+          }
+        ],
+        "siacoinOutputs": [
+          {
+            "value": "99999999999999999999999991",
+            "address": "addr:b8905efb7a6178d42acbbf704d45f0b71304711db8c9cd373e702323ef4d06cdaede473df5d7"
+          }
+        ],
+        "fileContracts": [
+          {
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 17,
+            "windowEnd": 41,
+            "payout": "6",
+            "validProofOutputs": [
+              {
+                "value": "3",
+                "address": "addr:b8905efb7a6178d42acbbf704d45f0b71304711db8c9cd373e702323ef4d06cdaede473df5d7"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "3",
+                "address": "addr:b8905efb7a6178d42acbbf704d45f0b71304711db8c9cd373e702323ef4d06cdaede473df5d7"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:f13c8cb76bae2f139115161fc332313fa10f6512381bc090c3a47cabb2370109",
+            "revisionNumber": 0
+          }
+        ],
+        "fileContractRevisions": [
+          {
+            "parentID": "fcid:af5bd2728c8c6269ed494376b89b453904c750b4a92a713c568053ad3aab0c74",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:6f1581709bb7b1ef030d210db18e3b0ba1c776fba65d8cdaad05415142d189f8",
+                "ed25519:6f1581709bb7b1ef030d210db18e3b0ba1c776fba65d8cdaad05415142d189f8"
+              ],
+              "signaturesRequired": 2
+            },
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 12,
+            "windowEnd": 26,
+            "validProofOutputs": [
+              {
+                "value": "3",
+                "address": "addr:6669ea63ef3740dd788a6ff8014dae96da2ca37e3620cc9e633d5468df78d19b142334bf150b"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "3",
+                "address": "addr:6669ea63ef3740dd788a6ff8014dae96da2ca37e3620cc9e633d5468df78d19b142334bf150b"
+              },
+              {
+                "value": "1",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:29efee1527b195aa52df3b4dad04aa9488337022e5378c3220e6339775ad5f4a",
+            "revisionNumber": 1
+          }
+        ],
+        "signatures": [
+          {
+            "parentID": "h:911fef7b207d5892cd6618abde2bc4f9f4736e87d56be5b274a9f1b477e08a64",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "E5y9zM/FpTUQSi5hyGUIDG52pxFKO7NG+FdMrEa8QlyMs6zRoh3/sMKG+pkMbOrIiwq18rm2Gp7QOGR+Es9oBA=="
+          },
+          {
+            "parentID": "h:af5bd2728c8c6269ed494376b89b453904c750b4a92a713c568053ad3aab0c74",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "KGrXHGc52AXTvBDV1t42rdIBzf9poOcFBtwTfeNr8izCPT21U0WJDEa17YtRpXLo49pQ97vI2YCklgspivfZCw=="
+          },
+          {
+            "parentID": "h:af5bd2728c8c6269ed494376b89b453904c750b4a92a713c568053ad3aab0c74",
+            "publicKeyIndex": 1,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "oQonOHH6NMbfx2OWx2vVyDiKV21+EzZ/KbAiEARV1GTvVBp0FhQLnmxKgWVeOsx24kA94wUTVXFV705Gqf/iAQ=="
+          }
+        ]
+      },
+      {
+        "siacoinInputs": [
+          {
+            "parentID": "scoid:cf3b8ae1b42795ba8a6b08f5ae68cb66564e76bf1e66e997a3337d53884524bb",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:eca8c5eaf4e6106aed6d5addfe16b36f1bfe3aa41c1ceae43205780d8e3ad191"
+              ],
+              "signaturesRequired": 1
+            }
+          }
+        ],
+        "siacoinOutputs": [
+          {
+            "value": "99999999999999999999999993",
+            "address": "addr:3c811d4ec74bcd0a4a18906b34adf57e6aef160ed4dc72fe2de5a09605be648d5db373e6a6ce"
+          }
+        ],
+        "fileContracts": [
+          {
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 12,
+            "windowEnd": 33,
+            "payout": "3",
+            "validProofOutputs": [
+              {
+                "value": "1",
+                "address": "addr:3c811d4ec74bcd0a4a18906b34adf57e6aef160ed4dc72fe2de5a09605be648d5db373e6a6ce"
+              },
+              {
+                "value": "2",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "1",
+                "address": "addr:3c811d4ec74bcd0a4a18906b34adf57e6aef160ed4dc72fe2de5a09605be648d5db373e6a6ce"
+              },
+              {
+                "value": "2",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:9a61e34a1360bb64a66bc16f837c383791f90499dd7a8b7ec1a3f372cce908e3",
+            "revisionNumber": 0
+          }
+        ],
+        "fileContractRevisions": [
+          {
+            "parentID": "fcid:41df06e1f7c6e837e13ab7d53a95df4ddfc33405ce3b25a375e3b6f60b2e7ae0",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:6f1581709bb7b1ef030d210db18e3b0ba1c776fba65d8cdaad05415142d189f8",
+                "ed25519:6f1581709bb7b1ef030d210db18e3b0ba1c776fba65d8cdaad05415142d189f8"
+              ],
+              "signaturesRequired": 2
+            },
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 9,
+            "windowEnd": 22,
+            "validProofOutputs": [
+              {
+                "value": "1",
+                "address": "addr:3c811d4ec74bcd0a4a18906b34adf57e6aef160ed4dc72fe2de5a09605be648d5db373e6a6ce"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "1",
+                "address": "addr:3c811d4ec74bcd0a4a18906b34adf57e6aef160ed4dc72fe2de5a09605be648d5db373e6a6ce"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:29efee1527b195aa52df3b4dad04aa9488337022e5378c3220e6339775ad5f4a",
+            "revisionNumber": 1
+          }
+        ],
+        "signatures": [
+          {
+            "parentID": "h:cf3b8ae1b42795ba8a6b08f5ae68cb66564e76bf1e66e997a3337d53884524bb",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "T2ajFGazntzEy8HtVqiJFfW8aStt2bYgrMQLVAhmZAdGGk8j+zzxCwEtTATnHzLTVwk7NnBMiagHHvJTMcF0Bg=="
+          },
+          {
+            "parentID": "h:41df06e1f7c6e837e13ab7d53a95df4ddfc33405ce3b25a375e3b6f60b2e7ae0",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "kkS4VWLECjMc+n9iMrzoaqvZ1OqcAUiEA2gC1zzcqbvSlTDqCpwMjZbD31hjgdO2uTItF9/4+PawnzN5E5XVCA=="
+          },
+          {
+            "parentID": "h:41df06e1f7c6e837e13ab7d53a95df4ddfc33405ce3b25a375e3b6f60b2e7ae0",
+            "publicKeyIndex": 1,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "tjX3kAHKlnYVoCLQRdS7scRycyycj5cMqXh0qs0E5rEYLvf+0AHmPasAiHi5hf/wb5I7OqmVKLkMzTJCcSAPAQ=="
+          }
+        ]
+      },
+      {
+        "siacoinInputs": [
+          {
+            "parentID": "scoid:0399ab07de18f83380c24810d5a3b8798daa7bc309e0ffd163b77fbedea1744b",
+            "unlockConditions": {
+              "timelock": 0,
+              "publicKeys": [
+                "ed25519:e15be2cd7644fe5efbc149aad9edf7f4bf53b9fce1053f788687e1e0c73f790f"
+              ],
+              "signaturesRequired": 1
+            }
+          }
+        ],
+        "siacoinOutputs": [
+          {
+            "value": "99999999999999999999999992",
+            "address": "addr:ee3f61c555138062cda82ab4371ae65eb938e6765b33d4daeaf26424b2607add9dbc9160e93f"
+          }
+        ],
+        "fileContracts": [
+          {
+            "filesize": 0,
+            "fileMerkleRoot": "h:0000000000000000000000000000000000000000000000000000000000000000",
+            "windowStart": 6,
+            "windowEnd": 14,
+            "payout": "5",
+            "validProofOutputs": [
+              {
+                "value": "2",
+                "address": "addr:ee3f61c555138062cda82ab4371ae65eb938e6765b33d4daeaf26424b2607add9dbc9160e93f"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "missedProofOutputs": [
+              {
+                "value": "2",
+                "address": "addr:ee3f61c555138062cda82ab4371ae65eb938e6765b33d4daeaf26424b2607add9dbc9160e93f"
+              },
+              {
+                "value": "3",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              },
+              {
+                "value": "0",
+                "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+              }
+            ],
+            "unlockHash": "h:29efee1527b195aa52df3b4dad04aa9488337022e5378c3220e6339775ad5f4a",
+            "revisionNumber": 0
+          }
+        ],
+        "signatures": [
+          {
+            "parentID": "h:0399ab07de18f83380c24810d5a3b8798daa7bc309e0ffd163b77fbedea1744b",
+            "publicKeyIndex": 0,
+            "coveredFields": {
+              "wholeTransaction": true
+            },
+            "signature": "XHkExqSzDCh9LjM4C/R4GiBkG+DTlHPh6udAzh2o4cH/uHG8zEmlBgLqzABq1m05D5dGv8OFSqdxgN9j9q4mCw=="
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "parentID": "bid:4e65453a6191645ea36ea8bce488c04b3a732209634cbec0986bd0ca4cd85b5f",
+    "nonce": 0,
+    "timestamp": "2021-04-10T01:53:11-04:00",
+    "minerPayouts": [
+      {
+        "value": "300000000000000000000000000000",
+        "address": "addr:000000000000000000000000000000000000000000000000000000000000000089eb0d6a8a69"
+      }
+    ],
+    "transactions": null
+  }
+]

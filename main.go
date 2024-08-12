@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"math/rand"
 	"os"
@@ -11,7 +12,6 @@ import (
 	"go.sia.tech/core/types"
 	"go.sia.tech/coreutils"
 	"go.sia.tech/coreutils/chain"
-	"go.sia.tech/fuzz/randgen"
 )
 
 func testnet() (*consensus.Network, types.Block) {
@@ -51,7 +51,7 @@ func main() {
 
 	var pks []types.PrivateKey
 	rng := rand.New(rand.NewSource(1))
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 5; i++ {
 		var b [32]byte
 		rng.Read(b[:])
 		pks = append(pks, types.NewPrivateKeyFromSeed(b[:]))
@@ -88,25 +88,25 @@ func main() {
 
 	cm := chain.NewManager(store, genesisState)
 
-	// file, err := os.Open("blocks.json")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer file.Close()
+	file, err := os.Open("blocks.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
 
-	// var blocks []types.Block
-	// if err := json.NewDecoder(file).Decode(&blocks); err != nil {
-	// 	log.Fatal(err)
-	// }
+	var blocks []types.Block
+	if err := json.NewDecoder(file).Decode(&blocks); err != nil {
+		log.Fatal(err)
+	}
 
-	// if err := cm.AddBlocks(blocks[:2]); err != nil {
-	// 	log.Fatal(err)
-	// }
-	// if err := cm.AddBlocks([]types.Block{blocks[2]}); err != nil {
-	// 	// crash HERE
-	// 	log.Fatal(err)
-	// }
+	if err := cm.AddBlocks(blocks[:2]); err != nil {
+		log.Fatal(err)
+	}
+	if err := cm.AddBlocks(blocks[2:]); err != nil {
+		// crash HERE
+		log.Fatal(err)
+	}
 
-	f := randgen.NewFuzzer(rng, n, cm, pks)
-	f.Run(1e7)
+	// f := randgen.NewFuzzer(rng, n, cm, pks)
+	// f.Run(1e7)
 }
