@@ -66,6 +66,9 @@ type ContractAddresses struct {
 }
 
 type Fuzzer struct {
+	network *consensus.Network
+	genesis types.Block
+
 	accs     map[types.Address]Account
 	accAddrs []types.Address
 
@@ -352,8 +355,11 @@ func (f *Fuzzer) randTxns(height uint64) (txns []types.Transaction) {
 	return
 }
 
-func NewFuzzer(rng *rand.Rand, n *consensus.Network, cm *chain.Manager, pks []types.PrivateKey) Fuzzer {
+func NewFuzzer(rng *rand.Rand, network *consensus.Network, genesisBlock types.Block, cm *chain.Manager, pks []types.PrivateKey) Fuzzer {
 	f := Fuzzer{
+		network: network,
+		genesis: genesisBlock,
+
 		accs:              make(map[types.Address]Account),
 		contracts:         make(map[types.FileContractID]types.FileContractElement),
 		contractAddresses: make(map[types.FileContractID]ContractAddresses),

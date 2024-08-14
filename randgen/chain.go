@@ -2,6 +2,7 @@ package randgen
 
 import (
 	"encoding/json"
+	"log"
 	"math"
 	"math/bits"
 	"os"
@@ -115,17 +116,25 @@ func (f *Fuzzer) signTxn(priv types.PrivateKey, txn *types.Transaction) {
 }
 
 func (f *Fuzzer) applyBlocks(b []types.Block) {
-	f.appliedBlocks = append(f.appliedBlocks, b...)
-	{
-		file, err := os.Create("blocks.json")
-		if err != nil {
+	defer func() {
+		if err := recover(); err != nil {
+			file, err := os.Create("crasher.json")
+			if err != nil {
+				panic(err)
+			}
+			defer file.Close()
+			if err := json.NewEncoder(file).Encode(Crasher{
+				Network:    f.network,
+				Genesis:    f.genesis,
+				Blocks:     append(f.appliedBlocks, b...),
+				CrashIndex: len(f.appliedBlocks),
+			}); err != nil {
+				panic(err)
+			}
+			log.Println("Wrote crasher.json")
 			panic(err)
 		}
-		defer file.Close()
-		if err := json.NewEncoder(file).Encode(f.appliedBlocks); err != nil {
-			panic(err)
-		}
-	}
+	}()
 
 	prev := f.cm.Tip()
 	if err := f.cm.AddBlocks(b); err != nil {
@@ -136,6 +145,8 @@ func (f *Fuzzer) applyBlocks(b []types.Block) {
 		panic(err)
 	}
 	f.applyUpdates(crus, caus)
+
+	f.appliedBlocks = append(f.appliedBlocks, b...)
 }
 
 func (f *Fuzzer) mineBlock(state consensus.State, minerAddr types.Address, txns []types.Transaction) types.Block {

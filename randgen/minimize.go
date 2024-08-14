@@ -1,6 +1,8 @@
 package randgen
 
 import (
+	"log"
+
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
 	"go.sia.tech/coreutils/chain"
@@ -8,9 +10,9 @@ import (
 
 type Crasher struct {
 	Network    *consensus.Network `json:"network"`
+	CrashIndex int                `json:"crashIndex"`
 	Genesis    types.Block        `json:"genesis"`
 	Blocks     []types.Block      `json:"blocks"`
-	CrashIndex uint64             `json:"crashIndex"`
 }
 
 func (c Crasher) MemChainManager() *chain.Manager {
@@ -54,6 +56,7 @@ func Minimize(c *Crasher, fn func(Crasher)) {
 		for j := len(c.Blocks[i].Transactions) - 1; j >= 0; j-- {
 			if panics(i, j) {
 				c.Blocks[i].Transactions = append(c.Blocks[i].Transactions[:j], c.Blocks[i].Transactions[j+1:]...)
+				j--
 			}
 		}
 	}

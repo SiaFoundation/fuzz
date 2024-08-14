@@ -63,44 +63,44 @@ func main() {
 	cmd := flagg.Parse(tree)
 	args := cmd.Args()
 
-	n, genesisBlock := testnet()
-
-	n.HardforkTax.Height = 0
-	n.HardforkFoundation.Height = 0
-	n.InitialTarget = types.BlockID{0xFF}
-
-	giftAmountSC := types.Siacoins(100)
-	giftAmountSF := uint64(100)
-
-	var pks []types.PrivateKey
-	rng := rand.New(rand.NewSource(1))
-	for i := 0; i < *numberPks; i++ {
-		var b [32]byte
-		rng.Read(b[:])
-		pks = append(pks, types.NewPrivateKeyFromSeed(b[:]))
-	}
-
-	for _, pk := range pks {
-		addr := types.StandardUnlockConditions(pk.PublicKey()).UnlockHash()
-		genesisBlock.Transactions = append(genesisBlock.Transactions, types.Transaction{
-			SiacoinOutputs: []types.SiacoinOutput{
-				{Address: addr, Value: giftAmountSC},
-			},
-			SiafundOutputs: []types.SiafundOutput{
-				{Address: addr, Value: giftAmountSF},
-			},
-		})
-	}
-
-	store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), n, genesisBlock)
-	if err != nil {
-		log.Fatal(err)
-	}
-	cm := chain.NewManager(store, genesisState)
-
 	switch cmd {
 	case rootCmd, runCmd:
-		f := randgen.NewFuzzer(rng, n, cm, pks)
+		n, genesisBlock := testnet()
+
+		n.HardforkTax.Height = 0
+		n.HardforkFoundation.Height = 0
+		n.InitialTarget = types.BlockID{0xFF}
+
+		giftAmountSC := types.Siacoins(100)
+		giftAmountSF := uint64(100)
+
+		var pks []types.PrivateKey
+		rng := rand.New(rand.NewSource(1))
+		for i := 0; i < *numberPks; i++ {
+			var b [32]byte
+			rng.Read(b[:])
+			pks = append(pks, types.NewPrivateKeyFromSeed(b[:]))
+		}
+
+		for _, pk := range pks {
+			addr := types.StandardUnlockConditions(pk.PublicKey()).UnlockHash()
+			genesisBlock.Transactions = append(genesisBlock.Transactions, types.Transaction{
+				SiacoinOutputs: []types.SiacoinOutput{
+					{Address: addr, Value: giftAmountSC},
+				},
+				SiafundOutputs: []types.SiafundOutput{
+					{Address: addr, Value: giftAmountSF},
+				},
+			})
+		}
+
+		store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), n, genesisBlock)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cm := chain.NewManager(store, genesisState)
+
+		f := randgen.NewFuzzer(rng, n, genesisBlock, cm, pks)
 		f.Run(*iterations)
 		break
 	case testCmd:
@@ -151,11 +151,12 @@ func main() {
 			cm := c.MemChainManager()
 
 			if err := cm.AddBlocks(c.Blocks[:c.CrashIndex]); err != nil {
-				log.Fatal(err)
+				return
 			}
 			if err := cm.AddBlocks(c.Blocks[c.CrashIndex:]); err != nil {
-				log.Fatal(err)
+				return
 			}
+			log.Println(cm.Tip())
 		}
 		randgen.Minimize(&c, fn)
 
@@ -172,6 +173,7 @@ func main() {
 			defer file.Close()
 		}()
 
+		log.Printf("Wrote minimized %s\n", args[0])
 		break
 	}
 }
