@@ -5,18 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"go.sia.tech/core/consensus"
-	"go.sia.tech/core/types"
-	"go.sia.tech/coreutils/chain"
+	"go.sia.tech/fuzz/randgen"
 )
 
-type Crasher struct {
-	Network *consensus.Network `json:"network"`
-	Genesis types.Block        `json:"genesis"`
-	Blocks  []types.Block      `json:"blocks"`
-}
-
-func loadCrasher(t *testing.T, path string) (c Crasher) {
+func loadCrasher(t *testing.T, path string) (c randgen.Crasher) {
 	js, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -29,11 +21,7 @@ func loadCrasher(t *testing.T, path string) (c Crasher) {
 func TestCoreutils_fee4ef5a(t *testing.T) {
 	c := loadCrasher(t, "coreutils-fee4ef5a.json")
 
-	store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), c.Network, c.Genesis)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cm := chain.NewManager(store, genesisState)
+	cm := c.MemChainManager()
 	if err := cm.AddBlocks(c.Blocks[:2]); err != nil {
 		t.Fatal(err)
 	}
