@@ -54,7 +54,6 @@ func Minimize(c *Crasher, fn func(Crasher)) {
 		for j := len(c.Blocks[i].Transactions) - 1; j >= 0; j-- {
 			if panics(i, j) {
 				c.Blocks[i].Transactions = append(c.Blocks[i].Transactions[:j], c.Blocks[i].Transactions[j+1:]...)
-				j--
 			}
 		}
 	}

@@ -44,6 +44,8 @@ func main() {
 	var rootCmd *flag.FlagSet = flagg.Root
 	rootCmd.Usage = flagg.SimpleUsage(rootCmd, `Usage: fuzz [command] [args]
 
+If no command is specified the fuzzer will be run with the default parameters.
+
 Commands:
 	fuzz run
 	fuzz test input.json
@@ -176,12 +178,10 @@ Minimize a JSON encoded crasher to find the simplest combination of transactions
 				log.Println(err)
 				return
 			}
-			log.Println("cm.AddBlocks 1:", cm.Tip())
 			if err := cm.AddBlocks(c.Blocks[c.CrashIndex:]); err != nil {
 				log.Println(err)
 				return
 			}
-			log.Println("Bottom of fn:", cm.Tip())
 		}
 		randgen.Minimize(&c, fn)
 
