@@ -1,17 +1,14 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"math/rand"
-	"os"
-	"path/filepath"
 	"time"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
-	"go.sia.tech/coreutils"
 	"go.sia.tech/coreutils/chain"
+	"go.sia.tech/fuzz/randgen"
 )
 
 func testnet() (*consensus.Network, types.Block) {
@@ -69,44 +66,12 @@ func main() {
 		})
 	}
 
-	dir, err := os.MkdirTemp(os.TempDir(), "randgen")
+	store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), n, genesisBlock)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
-
-	bdb, err := coreutils.OpenBoltChainDB(filepath.Join(dir, "consensus.db"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer bdb.Close()
-
-	store, genesisState, err := chain.NewDBStore(bdb, n, genesisBlock)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	cm := chain.NewManager(store, genesisState)
 
-	file, err := os.Open("blocks.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	var blocks []types.Block
-	if err := json.NewDecoder(file).Decode(&blocks); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := cm.AddBlocks(blocks[:2]); err != nil {
-		log.Fatal(err)
-	}
-	if err := cm.AddBlocks(blocks[2:]); err != nil {
-		// crash HERE
-		log.Fatal(err)
-	}
-
-	// f := randgen.NewFuzzer(rng, n, cm, pks)
-	// f.Run(1e7)
+	f := randgen.NewFuzzer(rng, n, cm, pks)
+	f.Run(1e7)
 }
