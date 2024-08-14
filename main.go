@@ -42,15 +42,30 @@ func testnet() (*consensus.Network, types.Block) {
 
 func main() {
 	var rootCmd *flag.FlagSet = flagg.Root
-	rootCmd.Usage = flagg.SimpleUsage(rootCmd, "Fuzzer for core consensus")
+	rootCmd.Usage = flagg.SimpleUsage(rootCmd, `Usage: fuzz [command] [args]
+
+Commands:
+	fuzz run
+	fuzz test input.json
+	fuzz min input.json
+`)
 
 	// construct the command hierarchy
-	runCmd := flagg.New("run", "Run fuzzer")
+	runCmd := flagg.New("run", `Usage:
+	fuzz run
+Run the fuzzer.
+`)
 	seed := runCmd.Int64("seed", 1, "random number generator seed")
 	iterations := runCmd.Int("iterations", 1e7, "number of blocks to generate with fuzzer")
 	numberPks := runCmd.Int("pks", 20, "Number of accounts to use in the fuzzer.  Higher number means more transactions per block.")
-	testCmd := flagg.New("test", "Test a JSON encoded crasher and see if it crashes")
-	minCmd := flagg.New("min", "Minimize a JSON encoded crasher to find the simplest combination of transactions that panics")
+	testCmd := flagg.New("test", `Usage:
+	fuzz test input.json
+Test a JSON encoded crasher and see if it crashes.
+`)
+	minCmd := flagg.New("min", `Usage:
+	fuzz min input.json
+Minimize a JSON encoded crasher to find the simplest combination of transactions that panics.
+`)
 
 	tree := flagg.Tree{
 		Cmd: rootCmd,
