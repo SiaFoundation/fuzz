@@ -46,6 +46,7 @@ func main() {
 
 	// construct the command hierarchy
 	runCmd := flagg.New("run", "Run fuzzer")
+	seed := runCmd.Int64("seed", 1, "random number generator seed")
 	iterations := runCmd.Int("iterations", 1e7, "number of blocks to generate with fuzzer")
 	numberPks := runCmd.Int("pks", 20, "Number of accounts to use in the fuzzer.  Higher number means more transactions per block.")
 	testCmd := flagg.New("test", "Test a JSON encoded crasher and see if it crashes")
@@ -75,7 +76,7 @@ func main() {
 		giftAmountSF := uint64(100)
 
 		var pks []types.PrivateKey
-		rng := rand.New(rand.NewSource(1))
+		rng := rand.New(rand.NewSource(*seed))
 		for i := 0; i < *numberPks; i++ {
 			var b [32]byte
 			rng.Read(b[:])
@@ -147,21 +148,35 @@ func main() {
 			}
 		}()
 
+		beforeTxns := 0
+		for _, c := range c.Blocks {
+			beforeTxns += len(c.Transactions)
+		}
+
 		fn := func(c randgen.Crasher) {
 			cm := c.MemChainManager()
 
+			log.Println(len(c.Blocks))
 			if err := cm.AddBlocks(c.Blocks[:c.CrashIndex]); err != nil {
+				log.Println(err)
 				return
 			}
+			log.Println("cm.AddBlocks 1:", cm.Tip())
 			if err := cm.AddBlocks(c.Blocks[c.CrashIndex:]); err != nil {
+				log.Println(err)
 				return
 			}
-			log.Println(cm.Tip())
+			log.Println("Bottom of fn:", cm.Tip())
 		}
 		randgen.Minimize(&c, fn)
 
+		afterTxns := 0
+		for _, c := range c.Blocks {
+			afterTxns += len(c.Transactions)
+		}
+
 		func() {
-			file, err := os.Create(args[0])
+			file, err := os.Create(args[0] + ".min")
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -173,7 +188,7 @@ func main() {
 			defer file.Close()
 		}()
 
-		log.Printf("Wrote minimized %s\n", args[0])
+		log.Printf("Wrote minimized %s (%d -> %d transactions)\n", args[0], beforeTxns, afterTxns)
 		break
 	}
 }
