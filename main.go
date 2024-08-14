@@ -1,14 +1,18 @@
 package main
 
 import (
+	"encoding/json"
+	"flag"
 	"log"
 	"math/rand"
+	"os"
 	"time"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
 	"go.sia.tech/coreutils/chain"
 	"go.sia.tech/fuzz/randgen"
+	"lukechampine.com/flagg"
 )
 
 func testnet() (*consensus.Network, types.Block) {
@@ -37,6 +41,28 @@ func testnet() (*consensus.Network, types.Block) {
 }
 
 func main() {
+	var rootCmd *flag.FlagSet = flagg.Root
+	rootCmd.Usage = flagg.SimpleUsage(rootCmd, "Fuzzer for core consensus")
+
+	// construct the command hierarchy
+	runCmd := flagg.New("run", "Run fuzzer")
+	iterations := runCmd.Int("iterations", 1e7, "number of blocks to generate with fuzzer")
+	numberPks := runCmd.Int("pks", 20, "Number of accounts to use in the fuzzer.  Higher number means more transactions per block.")
+	testCmd := flagg.New("test", "Test a JSON encoded crasher and see if it crashes")
+	minCmd := flagg.New("min", "Minimize a JSON encoded crasher to find the simplest combination of transactions that panics")
+
+	tree := flagg.Tree{
+		Cmd: rootCmd,
+		Sub: []flagg.Tree{
+			{Cmd: runCmd},
+			{Cmd: testCmd},
+			{Cmd: minCmd},
+		},
+	}
+
+	cmd := flagg.Parse(tree)
+	args := cmd.Args()
+
 	n, genesisBlock := testnet()
 
 	n.HardforkTax.Height = 0
@@ -48,7 +74,7 @@ func main() {
 
 	var pks []types.PrivateKey
 	rng := rand.New(rand.NewSource(1))
-	for i := 0; i < 5; i++ {
+	for i := 0; i < *numberPks; i++ {
 		var b [32]byte
 		rng.Read(b[:])
 		pks = append(pks, types.NewPrivateKeyFromSeed(b[:]))
@@ -72,6 +98,80 @@ func main() {
 	}
 	cm := chain.NewManager(store, genesisState)
 
-	f := randgen.NewFuzzer(rng, n, cm, pks)
-	f.Run(1e7)
+	switch cmd {
+	case rootCmd, runCmd:
+		f := randgen.NewFuzzer(rng, n, cm, pks)
+		f.Run(*iterations)
+		break
+	case testCmd:
+		if len(args) == 0 {
+			testCmd.Usage()
+			return
+		}
+
+		file, err := os.Open(args[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+
+		var c randgen.Crasher
+		if err := json.NewDecoder(file).Decode(&c); err != nil {
+			log.Fatal(err)
+		}
+
+		cm := c.MemChainManager()
+		if err := cm.AddBlocks(c.Blocks[:c.CrashIndex]); err != nil {
+			log.Fatal(err)
+		}
+		if err := cm.AddBlocks(c.Blocks[c.CrashIndex:]); err != nil {
+			log.Fatal(err)
+		}
+		break
+	case minCmd:
+		if len(args) == 0 {
+			testCmd.Usage()
+			return
+		}
+
+		var c randgen.Crasher
+		func() {
+			file, err := os.Open(args[0])
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer file.Close()
+
+			if err := json.NewDecoder(file).Decode(&c); err != nil {
+				log.Fatal(err)
+			}
+		}()
+
+		fn := func(c randgen.Crasher) {
+			cm := c.MemChainManager()
+
+			if err := cm.AddBlocks(c.Blocks[:c.CrashIndex]); err != nil {
+				log.Fatal(err)
+			}
+			if err := cm.AddBlocks(c.Blocks[c.CrashIndex:]); err != nil {
+				log.Fatal(err)
+			}
+		}
+		randgen.Minimize(&c, fn)
+
+		func() {
+			file, err := os.Create(args[0])
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer file.Close()
+
+			if err := json.NewEncoder(file).Encode(c); err != nil {
+				log.Fatal(err)
+			}
+			defer file.Close()
+		}()
+
+		break
+	}
 }

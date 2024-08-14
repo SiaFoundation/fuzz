@@ -7,9 +7,10 @@ import (
 )
 
 type Crasher struct {
-	Network *consensus.Network `json:"network"`
-	Genesis types.Block        `json:"genesis"`
-	Blocks  []types.Block      `json:"blocks"`
+	Network    *consensus.Network `json:"network"`
+	Genesis    types.Block        `json:"genesis"`
+	Blocks     []types.Block      `json:"blocks"`
+	CrashIndex uint64             `json:"crashIndex"`
 }
 
 func (c Crasher) MemChainManager() *chain.Manager {
