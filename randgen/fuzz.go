@@ -17,11 +17,11 @@ const (
 	probReorg       = 0.5
 	probTransaction = 0.5
 
-	probSC       = 0.0
-	probSF       = 0.0
-	probFC       = 1.0
-	probReviseFC = 1.0
-	probMinerFee = 0.0
+	probSC       = 0.3
+	probSF       = 0.3
+	probFC       = 0.3
+	probReviseFC = 0.3
+	probMinerFee = 0.3
 )
 
 const (

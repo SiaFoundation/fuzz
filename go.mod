@@ -4,8 +4,8 @@ go 1.22.0
 
 require (
 	github.com/brunoga/deep v1.2.4
-	go.sia.tech/core v0.4.4-0.20240812172713-9dffffb62ce1
-	go.sia.tech/coreutils v0.2.6-0.20240812132102-0c5611ac9eaf
+	go.sia.tech/core v0.4.4-0.20240814175157-ebc804c7119c
+	go.sia.tech/coreutils v0.2.6-0.20240814205841-6bd57953a01b
 	lukechampine.com/flagg v1.1.1
 )
 
