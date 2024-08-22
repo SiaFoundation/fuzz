@@ -474,7 +474,7 @@ func (f *Fuzzer) Run(iterations int) {
 			var blocks []types.Block
 			extra := f.cm.Tip().Height - state.Index.Height + 1
 			for i := uint64(0); i < extra; i++ {
-				block := f.mineBlock(state, types.VoidAddress, f.randTxns(state), f.randV2Txns(state))
+				block := f.mineBlock(state, f.randAddr(types.VoidAddress), f.randTxns(state), f.randV2Txns(state))
 				blocks = append(blocks, block)
 
 				state.Index.Height += 1
@@ -493,7 +493,7 @@ func (f *Fuzzer) Run(iterations int) {
 			f.prevs = append(f.prevs, cpy)
 
 			cs := f.cm.TipState()
-			f.applyBlocks([]types.Block{f.mineBlock(cs, types.VoidAddress, f.randTxns(cs), f.randV2Txns(cs))})
+			f.applyBlocks([]types.Block{f.mineBlock(cs, f.randAddr(types.VoidAddress), f.randTxns(cs), f.randV2Txns(cs))})
 		}
 		log.Println(f.cm.Tip())
 	}
