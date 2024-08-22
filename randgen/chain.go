@@ -10,17 +10,8 @@ import (
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
+	"go.sia.tech/coreutils"
 )
-
-func findBlockNonce(cs consensus.State, b *types.Block) {
-	// ensure nonce meets factor requirement
-	for b.Nonce%cs.NonceFactor() != 0 {
-		b.Nonce++
-	}
-	for b.ID().CmpWork(cs.ChildTarget) < 0 {
-		b.Nonce += cs.NonceFactor()
-	}
-}
 
 // copied from rhp/v2 to avoid import cycle
 func prepareContractFormation(renterPubKey types.PublicKey, hostPubKey types.PublicKey, renterPayout, hostCollateral types.Currency, endHeight uint64, windowSize uint64, refundAddr types.Address) types.FileContract {
@@ -91,9 +82,9 @@ func totalOutputs(txn types.Transaction) (sc types.Currency, sf uint64) {
 	return
 }
 
-func (f *Fuzzer) signTxn(priv types.PrivateKey, txn *types.Transaction) {
+func (f *Fuzzer) signTxn(priv types.PrivateKey, cs consensus.State, txn *types.Transaction) {
 	appendSig := func(key types.PrivateKey, pubkeyIndex uint64, parentID types.Hash256) {
-		sig := key.SignHash(f.cm.TipState().WholeSigHash(*txn, parentID, pubkeyIndex, 0, nil))
+		sig := key.SignHash(cs.WholeSigHash(*txn, parentID, pubkeyIndex, 0, nil))
 		txn.Signatures = append(txn.Signatures, types.TransactionSignature{
 			ParentID:       parentID,
 			CoveredFields:  types.CoveredFields{WholeTransaction: true},
@@ -115,6 +106,42 @@ func (f *Fuzzer) signTxn(priv types.PrivateKey, txn *types.Transaction) {
 	}
 }
 
+func (f *Fuzzer) signV2Txn(priv types.PrivateKey, cs consensus.State, txn *types.V2Transaction) {
+	for i := range txn.SiacoinInputs {
+		txn.SiacoinInputs[i].SatisfiedPolicy.Signatures = []types.Signature{priv.SignHash(cs.InputSigHash(*txn))}
+	}
+	for i := range txn.SiafundInputs {
+		txn.SiafundInputs[i].SatisfiedPolicy.Signatures = []types.Signature{priv.SignHash(cs.InputSigHash(*txn))}
+	}
+	txnID := txn.ID()
+	for i := range txn.FileContracts {
+		addrs := f.contractAddresses[txn.V2FileContractID(txnID, i)]
+		renterPrivateKey, hostPrivateKey := f.accs[addrs.Renter].PK, f.accs[addrs.Host].PK
+		txn.FileContracts[i].RenterSignature = renterPrivateKey.SignHash(cs.ContractSigHash(txn.FileContracts[i]))
+		txn.FileContracts[i].HostSignature = hostPrivateKey.SignHash(cs.ContractSigHash(txn.FileContracts[i]))
+	}
+	for i := range txn.FileContractRevisions {
+		addrs := f.contractAddresses[types.FileContractID(txn.FileContractRevisions[i].Parent.ID)]
+		renterPrivateKey, hostPrivateKey := f.accs[addrs.Renter].PK, f.accs[addrs.Host].PK
+
+		txn.FileContractRevisions[i].Revision.RenterSignature = renterPrivateKey.SignHash(cs.ContractSigHash(txn.FileContractRevisions[i].Revision))
+		txn.FileContractRevisions[i].Revision.HostSignature = hostPrivateKey.SignHash(cs.ContractSigHash(txn.FileContractRevisions[i].Revision))
+	}
+	for i := range txn.FileContractResolutions {
+		addrs := f.contractAddresses[types.FileContractID(txn.FileContractResolutions[i].Parent.ID)]
+		renterPrivateKey, hostPrivateKey := f.accs[addrs.Renter].PK, f.accs[addrs.Host].PK
+
+		switch r := txn.FileContractResolutions[i].Resolution.(type) {
+		case *types.V2FileContractRenewal:
+			r.RenterSignature = renterPrivateKey.SignHash(cs.RenewalSigHash(*r))
+			r.HostSignature = hostPrivateKey.SignHash(cs.RenewalSigHash(*r))
+		case *types.V2FileContractFinalization:
+			r.RenterSignature = renterPrivateKey.SignHash(cs.ContractSigHash(types.V2FileContract(*r)))
+			r.HostSignature = hostPrivateKey.SignHash(cs.ContractSigHash(types.V2FileContract(*r)))
+		}
+	}
+}
+
 func (f *Fuzzer) applyBlocks(b []types.Block) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -132,7 +159,7 @@ func (f *Fuzzer) applyBlocks(b []types.Block) {
 				panic(err)
 			}
 			log.Println("Wrote crasher.json")
-			panic(err)
+			panic(nil)
 		}
 	}()
 
@@ -149,21 +176,43 @@ func (f *Fuzzer) applyBlocks(b []types.Block) {
 	f.appliedBlocks = append(f.appliedBlocks, b...)
 }
 
-func (f *Fuzzer) mineBlock(state consensus.State, minerAddr types.Address, txns []types.Transaction) types.Block {
-	var fees types.Currency
-	for _, txn := range txns {
-		for _, fee := range txn.MinerFees {
-			fees = fees.Add(fee)
+func (f *Fuzzer) mineBlock(cs consensus.State, rewardAddr types.Address, txns []types.Transaction, v2Txns []types.V2Transaction) types.Block {
+	b := types.Block{
+		ParentID:  cs.Index.ID,
+		Timestamp: types.CurrentTimestamp(),
+		MinerPayouts: []types.SiacoinOutput{{
+			Value:   cs.BlockReward(),
+			Address: rewardAddr,
+		}},
+	}
+
+	if cs.Index.Height >= cs.Network.HardforkV2.AllowHeight {
+		b.V2 = &types.V2BlockData{
+			Height: cs.Index.Height + 1,
 		}
 	}
-	b := types.Block{
-		ParentID:  state.Index.ID,
-		Timestamp: f.cm.TipState().Network.HardforkOak.GenesisTimestamp.Add(time.Second * time.Duration(1+f.cm.TipState().Index.Height)),
-		MinerPayouts: []types.SiacoinOutput{
-			{Address: minerAddr, Value: state.BlockReward().Add(fees)},
-		},
-		Transactions: txns,
+
+	var weight uint64
+	for _, txn := range txns {
+		if weight += cs.TransactionWeight(txn); weight > cs.MaxBlockWeight() {
+			break
+		}
+		b.Transactions = append(b.Transactions, txn)
+		b.MinerPayouts[0].Value = b.MinerPayouts[0].Value.Add(txn.TotalFees())
 	}
-	findBlockNonce(state, &b)
+	for _, txn := range v2Txns {
+		if weight += cs.V2TransactionWeight(txn); weight > cs.MaxBlockWeight() {
+			break
+		}
+		b.V2.Transactions = append(b.V2.Transactions, txn)
+		b.MinerPayouts[0].Value = b.MinerPayouts[0].Value.Add(txn.MinerFee)
+	}
+	if b.V2 != nil {
+		b.V2.Commitment = cs.Commitment(cs.TransactionsCommitment(b.Transactions, b.V2Transactions()), rewardAddr)
+	}
+
+	if !coreutils.FindBlockNonce(cs, &b, 5*time.Second) {
+		panic("mining too slow")
+	}
 	return b
 }

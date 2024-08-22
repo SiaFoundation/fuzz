@@ -34,7 +34,7 @@ func testnet() (*consensus.Network, types.Block) {
 	n.HardforkFoundation.Height = 70
 	n.HardforkFoundation.PrimaryAddress = types.AnyoneCanSpend().Address()
 	n.HardforkFoundation.FailsafeAddress = types.VoidAddress
-	n.HardforkV2.AllowHeight = 100000
+	n.HardforkV2.AllowHeight = 100
 	n.HardforkV2.RequireHeight = 200000
 	b := types.Block{Timestamp: n.HardforkOak.GenesisTimestamp}
 	return n, b
@@ -118,7 +118,7 @@ Minimize a JSON encoded crasher to find the simplest combination of transactions
 		}
 		cm := chain.NewManager(store, genesisState)
 
-		f := randgen.NewFuzzer(rng, n, genesisBlock, cm, pks)
+		f := randgen.NewFuzzer(rng, n, genesisBlock, store, cm, pks)
 		f.Run(*iterations)
 		break
 	case testCmd:

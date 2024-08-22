@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"time"
 
 	"github.com/brunoga/deep"
 
@@ -77,7 +78,9 @@ type Fuzzer struct {
 	contractAddresses map[types.FileContractID]ContractAddresses
 
 	rng *rand.Rand
-	cm  *chain.Manager
+
+	s  chain.Store
+	cm *chain.Manager
 
 	appliedBlocks []types.Block
 }
@@ -354,24 +357,73 @@ func (f *Fuzzer) randTxn(height uint64, addr types.Address) (types.Transaction, 
 			}
 		}
 	}
+
 	return txn, true
 }
 
-func (f *Fuzzer) randTxns(height uint64) (txns []types.Transaction) {
-	for _, addr := range f.accAddrs {
-		if f.prob(probTransaction) {
-			txn, ok := f.randTxn(height, addr)
-			if !ok {
-				continue
+func (f *Fuzzer) randTxns(cs consensus.State) (txns []types.Transaction) {
+	height := cs.Index.Height
+	if height < f.network.HardforkV2.RequireHeight {
+		for _, addr := range f.accAddrs {
+			if f.prob(probTransaction) {
+				txn, ok := f.randTxn(height, addr)
+				if !ok {
+					continue
+				}
+				f.signTxn(f.accs[addr].PK, cs, &txn)
+				txns = append(txns, txn)
 			}
-			f.signTxn(f.accs[addr].PK, &txn)
-			txns = append(txns, txn)
 		}
 	}
 	return
 }
 
-func NewFuzzer(rng *rand.Rand, network *consensus.Network, genesisBlock types.Block, cm *chain.Manager, pks []types.PrivateKey) Fuzzer {
+func (f *Fuzzer) randV2Txn(height uint64, addr types.Address) (types.V2Transaction, bool) {
+	var txn types.V2Transaction
+	// acc := f.accs[addr]
+
+	// f.addOutputs(acc, &txn)
+	// f.addMinerFee(acc, &txn)
+
+	// renter := f.accs[f.randAddr(types.VoidAddress)]
+	// host := f.accs[f.randAddr(types.VoidAddress)]
+	// f.addFileContract(acc, renter, host, &txn)
+	// f.addFileContractRevision(acc, height, &txn)
+	// if ok := f.fundTransaction(acc, height, &txn); !ok {
+	// 	return types.Transaction{}, ok
+	// }
+
+	// {
+	// 	for i := range txn.FileContracts {
+	// 		f.contractAddresses[txn.FileContractID(i)] = ContractAddresses{
+	// 			Renter: renter.Address,
+	// 			Host:   host.Address,
+	// 		}
+	// 	}
+	// }
+
+	return txn, true
+}
+
+func (f *Fuzzer) randV2Txns(cs consensus.State) (txns []types.V2Transaction) {
+	height := cs.Index.Height
+	if height >= f.network.HardforkV2.AllowHeight {
+		cs := f.cm.TipState()
+		for _, addr := range f.accAddrs {
+			if f.prob(probTransaction) {
+				txn, ok := f.randV2Txn(height, addr)
+				if !ok {
+					continue
+				}
+				f.signV2Txn(f.accs[addr].PK, cs, &txn)
+				txns = append(txns, txn)
+			}
+		}
+	}
+	return
+}
+
+func NewFuzzer(rng *rand.Rand, network *consensus.Network, genesisBlock types.Block, s chain.Store, cm *chain.Manager, pks []types.PrivateKey) Fuzzer {
 	f := Fuzzer{
 		network: network,
 		genesis: genesisBlock,
@@ -380,7 +432,9 @@ func NewFuzzer(rng *rand.Rand, network *consensus.Network, genesisBlock types.Bl
 		contracts:         make(map[types.FileContractID]types.FileContractElement),
 		contractAddresses: make(map[types.FileContractID]ContractAddresses),
 		rng:               rng,
-		cm:                cm,
+
+		s:  s,
+		cm: cm,
 	}
 
 	for _, pk := range pks {
@@ -421,9 +475,10 @@ func (f *Fuzzer) Run(iterations int) {
 			var blocks []types.Block
 			extra := f.cm.Tip().Height - state.Index.Height + 1
 			for i := uint64(0); i < extra; i++ {
-				blocks = append(blocks, f.mineBlock(state, types.VoidAddress, f.randTxns(state.Index.Height)))
-				state.Index.ID = blocks[len(blocks)-1].ID()
-				state.Index.Height++
+				block := f.mineBlock(state, types.VoidAddress, f.randTxns(state), f.randV2Txns(state))
+
+				state, _ = consensus.ApplyBlock(state, block, f.s.SupplementTipBlock(block), time.Time{})
+				blocks = append(blocks, block)
 			}
 
 			log.Println("REORG!")
@@ -436,7 +491,9 @@ func (f *Fuzzer) Run(iterations int) {
 				panic(err)
 			}
 			f.prevs = append(f.prevs, cpy)
-			f.applyBlocks([]types.Block{f.mineBlock(f.cm.TipState(), types.VoidAddress, f.randTxns(f.cm.Tip().Height))})
+
+			cs := f.cm.TipState()
+			f.applyBlocks([]types.Block{f.mineBlock(cs, types.VoidAddress, f.randTxns(cs), f.randV2Txns(cs))})
 		}
 		log.Println(f.cm.Tip())
 	}

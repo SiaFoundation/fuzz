@@ -1,8 +1,11 @@
 package randgen
 
 import (
+	"math"
+
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
+	"go.sia.tech/coreutils"
 	"go.sia.tech/coreutils/chain"
 )
 
@@ -40,7 +43,7 @@ func Minimize(c *Crasher, fn func(Crasher)) {
 		cm := c.MemChainManager()
 		for i := range c.Blocks {
 			c.Blocks[i].ParentID = cm.Tip().ID
-			findBlockNonce(cm.TipState(), &c.Blocks[i])
+			coreutils.FindBlockNonce(cm.TipState(), &c.Blocks[i], math.MaxInt64)
 			if err := cm.AddBlocks([]types.Block{c.Blocks[i]}); err != nil {
 				return // not a panic, just invalid
 			}
