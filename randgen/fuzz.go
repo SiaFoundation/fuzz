@@ -97,12 +97,17 @@ func (f *Fuzzer) prob(p float64) bool {
 }
 
 func (f *Fuzzer) randAddr(self types.Address) types.Address {
-	for addr := range f.accs {
-		if addr != self {
-			return addr
-		}
+	// if we have no other addresses to choose from
+	if len(f.accAddrs) == 1 && f.accAddrs[0] == self {
+		return types.VoidAddress
 	}
-	return types.VoidAddress
+
+	// otherwise, pick a random address
+	result := f.accAddrs[f.rng.Intn(len(f.accAddrs))]
+	if result == self {
+		return f.randAddr(self)
+	}
+	return result
 }
 
 func (f *Fuzzer) randSC() types.Currency {
