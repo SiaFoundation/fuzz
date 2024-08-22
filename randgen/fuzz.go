@@ -362,7 +362,7 @@ func (f *Fuzzer) randTxn(height uint64, addr types.Address) (types.Transaction, 
 
 func (f *Fuzzer) randTxns(cs consensus.State) (txns []types.Transaction) {
 	height := cs.Index.Height
-	if height < f.network.HardforkV2.RequireHeight {
+	if height < f.network.HardforkV2.RequireHeight-1 {
 		for _, addr := range f.accAddrs {
 			if f.prob(probTransaction) {
 				txn, ok := f.randTxn(height, addr)

@@ -35,7 +35,7 @@ func testnet() (*consensus.Network, types.Block) {
 	n.HardforkFoundation.PrimaryAddress = types.AnyoneCanSpend().Address()
 	n.HardforkFoundation.FailsafeAddress = types.VoidAddress
 	n.HardforkV2.AllowHeight = 100
-	n.HardforkV2.RequireHeight = 200000
+	n.HardforkV2.RequireHeight = 200
 	b := types.Block{Timestamp: n.HardforkOak.GenesisTimestamp}
 	return n, b
 }
