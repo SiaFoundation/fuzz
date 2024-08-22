@@ -6,11 +6,9 @@ import (
 	"math"
 	"math/bits"
 	"os"
-	"time"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
-	"go.sia.tech/coreutils"
 )
 
 // copied from rhp/v2 to avoid import cycle
@@ -211,8 +209,8 @@ func (f *Fuzzer) mineBlock(cs consensus.State, rewardAddr types.Address, txns []
 		b.V2.Commitment = cs.Commitment(cs.TransactionsCommitment(b.Transactions, b.V2Transactions()), rewardAddr)
 	}
 
-	if !coreutils.FindBlockNonce(cs, &b, 5*time.Second) {
-		panic("mining too slow")
-	}
+	// if !coreutils.FindBlockNonce(cs, &b, 5*time.Second) {
+	// 	panic("mining too slow")
+	// }
 	return b
 }

@@ -5,7 +5,6 @@ import (
 	"math"
 	"math/rand"
 	"sort"
-	"time"
 
 	"github.com/brunoga/deep"
 
@@ -476,9 +475,10 @@ func (f *Fuzzer) Run(iterations int) {
 			extra := f.cm.Tip().Height - state.Index.Height + 1
 			for i := uint64(0); i < extra; i++ {
 				block := f.mineBlock(state, types.VoidAddress, f.randTxns(state), f.randV2Txns(state))
-
-				state, _ = consensus.ApplyBlock(state, block, f.s.SupplementTipBlock(block), time.Time{})
 				blocks = append(blocks, block)
+
+				state.Index.Height += 1
+				state.Index.ID = block.ID()
 			}
 
 			log.Println("REORG!")
