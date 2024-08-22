@@ -6,9 +6,11 @@ import (
 	"math"
 	"math/bits"
 	"os"
+	"time"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
+	"go.sia.tech/coreutils"
 )
 
 // copied from rhp/v2 to avoid import cycle
@@ -76,7 +78,28 @@ func totalOutputs(txn types.Transaction) (sc types.Currency, sf uint64) {
 	for _, out := range txn.SiafundOutputs {
 		sf += out.Value
 	}
+	return
+}
 
+func totalOutputsV2(cs consensus.State, txn types.V2Transaction) (sc types.Currency, sf uint64) {
+	for _, out := range txn.SiacoinOutputs {
+		sc = sc.Add(out.Value)
+	}
+	for _, fc := range txn.FileContracts {
+		sc = sc.Add(fc.RenterOutput.Value).Add(fc.HostOutput.Value).Add(cs.V2FileContractTax(fc))
+	}
+	for _, fcr := range txn.FileContractResolutions {
+		if r, ok := fcr.Resolution.(*types.V2FileContractRenewal); ok {
+			// a renewal creates a new contract, optionally "rolling over" funds
+			// from the old contract
+			rev := r.NewContract
+			sc = sc.Add(rev.RenterOutput.Value).Add(rev.HostOutput.Value).Add(cs.V2FileContractTax(rev))
+		}
+	}
+	sc = sc.Add(txn.MinerFee)
+	for _, out := range txn.SiafundOutputs {
+		sf += out.Value
+	}
 	return
 }
 
@@ -209,8 +232,8 @@ func (f *Fuzzer) mineBlock(cs consensus.State, rewardAddr types.Address, txns []
 		b.V2.Commitment = cs.Commitment(cs.TransactionsCommitment(b.Transactions, b.V2Transactions()), rewardAddr)
 	}
 
-	// if !coreutils.FindBlockNonce(cs, &b, 5*time.Second) {
-	// 	panic("mining too slow")
-	// }
+	if !coreutils.FindBlockNonce(cs, &b, 5*time.Second) {
+		panic("mining too slow")
+	}
 	return b
 }
