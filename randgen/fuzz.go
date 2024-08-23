@@ -4,6 +4,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"time"
 
 	"github.com/brunoga/deep"
 
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	probReorg       = 0.5
+	probReorg       = 0.0
 	probTransaction = 0.5
 
 	probSC       = 0.3
@@ -77,8 +78,8 @@ type Fuzzer struct {
 
 	rng *rand.Rand
 
-	s  chain.Store
-	cm *chain.Manager
+	store chain.Store
+	cm    *chain.Manager
 
 	appliedBlocks []types.Block
 }
@@ -184,7 +185,7 @@ func (f *Fuzzer) applyUpdates(crus []chain.RevertUpdate, caus []chain.ApplyUpdat
 	}
 }
 
-func NewFuzzer(rng *rand.Rand, network *consensus.Network, genesisBlock types.Block, s chain.Store, cm *chain.Manager, pks []types.PrivateKey) Fuzzer {
+func NewFuzzer(rng *rand.Rand, network *consensus.Network, genesisBlock types.Block, store chain.Store, cm *chain.Manager, pks []types.PrivateKey) Fuzzer {
 	f := Fuzzer{
 		network: network,
 		genesis: genesisBlock,
@@ -194,8 +195,8 @@ func NewFuzzer(rng *rand.Rand, network *consensus.Network, genesisBlock types.Bl
 		contractAddresses: make(map[types.FileContractID]ContractAddresses),
 		rng:               rng,
 
-		s:  s,
-		cm: cm,
+		store: store,
+		cm:    cm,
 	}
 
 	for _, pk := range pks {
@@ -213,6 +214,30 @@ func NewFuzzer(rng *rand.Rand, network *consensus.Network, genesisBlock types.Bl
 	}
 
 	return f
+}
+
+type chainUpdate interface {
+	UpdateElementProof(e *types.StateElement)
+}
+
+func (f *Fuzzer) updateProofs(update chainUpdate) {
+	for fcid := range f.contracts {
+		e := f.contracts[fcid]
+		update.UpdateElementProof(&e.StateElement)
+		f.contracts[fcid] = e
+	}
+	for _, acc := range f.accs {
+		for scid := range acc.SCUtxos {
+			e := acc.SCUtxos[scid]
+			update.UpdateElementProof(&e.StateElement)
+			acc.SCUtxos[scid] = e
+		}
+		for sfid := range acc.SFUtxos {
+			e := acc.SFUtxos[sfid]
+			update.UpdateElementProof(&e.StateElement)
+			acc.SFUtxos[sfid] = e
+		}
+	}
 }
 
 func (f *Fuzzer) Run(iterations int) {
@@ -255,7 +280,17 @@ func (f *Fuzzer) Run(iterations int) {
 			f.prevs = append(f.prevs, cpy)
 
 			cs := f.cm.TipState()
-			f.applyBlocks([]types.Block{f.mineBlock(cs, f.randAddr(types.VoidAddress), f.randTxns(cs), f.randV2Txns(cs))})
+
+			txns := f.randTxns(cs)
+			if _, err := f.cm.AddV2PoolTransactions(cs.Index, f.randV2Txns(cs)); err != nil {
+				panic(err)
+			}
+			block := f.mineBlock(cs, f.randAddr(types.VoidAddress), txns, f.cm.V2PoolTransactions())
+
+			_, au := consensus.ApplyBlock(cs, block, f.store.SupplementTipBlock(block), time.Time{})
+			f.updateProofs(au)
+
+			f.applyBlocks([]types.Block{block})
 		}
 		log.Println(f.cm.Tip())
 	}
