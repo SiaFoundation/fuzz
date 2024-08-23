@@ -56,9 +56,10 @@ func (a *Account) Balance() (sc types.Currency, sf uint64) {
 }
 
 type prevState struct {
-	State     consensus.State
-	Accs      map[types.Address]Account
-	Contracts map[types.FileContractID]types.FileContractElement
+	State       consensus.State
+	Accs        map[types.Address]Account
+	Contracts   map[types.FileContractID]types.FileContractElement
+	V2Contracts map[types.FileContractID]types.V2FileContractElement
 }
 
 type ContractAddresses struct {
@@ -72,8 +73,10 @@ type Fuzzer struct {
 	accs     map[types.Address]Account
 	accAddrs []types.Address
 
-	prevs             []prevState
+	prevs []prevState
+
 	contracts         map[types.FileContractID]types.FileContractElement
+	v2contracts       map[types.FileContractID]types.V2FileContractElement
 	contractAddresses map[types.FileContractID]ContractAddresses
 
 	rng *rand.Rand
@@ -151,6 +154,17 @@ func (f *Fuzzer) applyUpdates(crus []chain.RevertUpdate, caus []chain.ApplyUpdat
 				f.contracts[id] = fce
 			}
 		})
+		cru.ForEachV2FileContractElement(func(fce types.V2FileContractElement, created bool, rev *types.V2FileContractElement, res types.V2FileContractResolutionType) {
+			id := types.FileContractID(fce.StateElement.ID)
+
+			if created {
+				delete(f.v2contracts, id)
+			} else if rev != nil {
+				f.v2contracts[id] = fce
+			} else if res != nil {
+				f.v2contracts[id] = fce
+			}
+		})
 	}
 	for _, cau := range caus {
 		cau.ForEachSiacoinElement(func(sce types.SiacoinElement, created, spent bool) {
@@ -182,6 +196,17 @@ func (f *Fuzzer) applyUpdates(crus []chain.RevertUpdate, caus []chain.ApplyUpdat
 				delete(f.contracts, id)
 			}
 		})
+		cau.ForEachV2FileContractElement(func(fce types.V2FileContractElement, created bool, rev *types.V2FileContractElement, res types.V2FileContractResolutionType) {
+			id := types.FileContractID(fce.StateElement.ID)
+
+			if created {
+				f.v2contracts[id] = fce
+			} else if rev != nil {
+				f.v2contracts[id] = *rev
+			} else if res != nil {
+				delete(f.v2contracts, id)
+			}
+		})
 	}
 }
 
@@ -192,6 +217,7 @@ func NewFuzzer(rng *rand.Rand, network *consensus.Network, genesisBlock types.Bl
 
 		accs:              make(map[types.Address]Account),
 		contracts:         make(map[types.FileContractID]types.FileContractElement),
+		v2contracts:       make(map[types.FileContractID]types.V2FileContractElement),
 		contractAddresses: make(map[types.FileContractID]ContractAddresses),
 		rng:               rng,
 
@@ -222,6 +248,11 @@ type chainUpdate interface {
 
 func (f *Fuzzer) updateProofs(update chainUpdate) {
 	for fcid := range f.contracts {
+		e := f.contracts[fcid]
+		update.UpdateElementProof(&e.StateElement)
+		f.contracts[fcid] = e
+	}
+	for fcid := range f.v2contracts {
 		e := f.contracts[fcid]
 		update.UpdateElementProof(&e.StateElement)
 		f.contracts[fcid] = e
@@ -257,6 +288,7 @@ func (f *Fuzzer) Run(iterations int) {
 			state := cpy.State
 			f.accs = cpy.Accs
 			f.contracts = cpy.Contracts
+			f.v2contracts = cpy.V2Contracts
 
 			var blocks []types.Block
 			var au consensus.ApplyUpdate
@@ -275,14 +307,14 @@ func (f *Fuzzer) Run(iterations int) {
 			f.addBlocks(blocks)
 			// log.Println("AFTER:", f.cm.Tip())
 		} else {
-			cpy, err := deep.Copy(prevState{f.cm.TipState(), f.accs, f.contracts})
+			cpy, err := deep.Copy(prevState{f.cm.TipState(), f.accs, f.contracts, f.v2contracts})
 			if err != nil {
 				panic(err)
 			}
 			f.prevs = append(f.prevs, cpy)
 
 			cs := f.cm.TipState()
-			block := f.mineBlock(cs, types.VoidAddress, f.randTxns(cs), f.randV2Txns(cs))
+			block := f.mineBlock(cs, types.VoidAddress, nil, f.randV2Txns(cs))
 			_, au := consensus.ApplyBlock(cs, block, f.store.SupplementTipBlock(block), time.Time{})
 
 			f.applyUpdates(nil, []chain.ApplyUpdate{{ApplyUpdate: au}})

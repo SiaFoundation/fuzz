@@ -113,6 +113,62 @@ func (f *Fuzzer) fundV2Transaction(cs consensus.State, acc Account, height uint6
 	return true
 }
 
+func (f *Fuzzer) addV2FileContract(cs consensus.State, acc, renter, host Account, txn *types.V2Transaction) {
+	if f.prob(probFC) {
+		windowStart := f.cm.Tip().Height + 1 + uint64(f.rng.Intn(maxContractExpire))
+		windowEnd := windowStart + 1 + uint64(f.rng.Intn(maxContractExpire))
+
+		fc := types.V2FileContract{
+			RenterOutput: types.SiacoinOutput{
+				Address: renter.Address,
+				Value:   f.randSC(),
+			},
+			HostOutput: types.SiacoinOutput{
+				Address: host.Address,
+				Value:   f.randSC(),
+			},
+			ProofHeight:      windowStart,
+			ExpirationHeight: windowEnd,
+
+			RenterPublicKey: renter.PK.PublicKey(),
+			HostPublicKey:   host.PK.PublicKey(),
+		}
+
+		txn.FileContracts = append(txn.FileContracts, fc)
+	}
+}
+
+func (f *Fuzzer) addV2FileContractRevision(acc Account, height uint64, txn *types.V2Transaction) {
+	if f.prob(probReviseFC) {
+		var fces []types.V2FileContractElement
+		for _, fce := range f.v2contracts {
+			// we can't revise after proof window has opened
+			if height >= fce.V2FileContract.ProofHeight {
+				continue
+			}
+			fces = append(fces, fce)
+		}
+		sort.Slice(fces, func(i, j int) bool {
+			return fces[i].ID.String() > fces[j].ID.String()
+		})
+		if len(fces) > 0 {
+			fc := fces[f.rng.Intn(len(fces))]
+			rev := fc.V2FileContract
+			rev.RevisionNumber++
+			rev.ProofHeight = height + 1 + uint64(f.rng.Intn(maxContractExpire))
+			rev.ExpirationHeight = rev.ProofHeight + 1 + uint64(f.rng.Intn(maxContractExpire))
+
+			txn.FileContractRevisions = append(txn.FileContractRevisions, types.V2FileContractRevision{
+				Parent:   fc,
+				Revision: rev,
+			})
+
+			// don't revise again in same block
+			delete(f.v2contracts, types.FileContractID(fc.ID))
+		}
+	}
+}
+
 func (f *Fuzzer) randV2Txn(cs consensus.State, height uint64, addr types.Address) (types.V2Transaction, bool) {
 	var txn types.V2Transaction
 	acc := f.accs[addr]
@@ -120,22 +176,22 @@ func (f *Fuzzer) randV2Txn(cs consensus.State, height uint64, addr types.Address
 	f.addV2Outputs(acc, &txn)
 	f.addV2MinerFee(acc, &txn)
 
-	// renter := f.accs[f.randAddr(types.VoidAddress)]
-	// host := f.accs[f.randAddr(types.VoidAddress)]
-	// f.addFileContract(acc, renter, host, &txn)
-	// f.addFileContractRevision(acc, height, &txn)
+	renter := f.accs[f.randAddr(types.VoidAddress)]
+	host := f.accs[f.randAddr(types.VoidAddress)]
+	f.addV2FileContract(cs, acc, renter, host, &txn)
+	f.addV2FileContractRevision(acc, height, &txn)
 	if ok := f.fundV2Transaction(cs, acc, height, &txn); !ok {
 		return types.V2Transaction{}, ok
 	}
 
-	// {
-	// 	for i := range txn.FileContracts {
-	// 		f.contractAddresses[txn.FileContractID(i)] = ContractAddresses{
-	// 			Renter: renter.Address,
-	// 			Host:   host.Address,
-	// 		}
-	// 	}
-	// }
+	{
+		for i := range txn.FileContracts {
+			f.contractAddresses[txn.V2FileContractID(txn.ID(), i)] = ContractAddresses{
+				Renter: renter.Address,
+				Host:   host.Address,
+			}
+		}
+	}
 
 	return txn, true
 }
