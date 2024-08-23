@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	probReorg       = 0.0
+	probReorg       = 0.5
 	probTransaction = 0.5
 
 	probSC       = 0.3
@@ -259,18 +259,20 @@ func (f *Fuzzer) Run(iterations int) {
 			f.contracts = cpy.Contracts
 
 			var blocks []types.Block
+			var au consensus.ApplyUpdate
 			extra := f.cm.Tip().Height - state.Index.Height + 1
 			for i := uint64(0); i < extra; i++ {
-				block := f.mineBlock(state, f.randAddr(types.VoidAddress), f.randTxns(state), f.randV2Txns(state))
+				block := f.mineBlock(state, types.VoidAddress, nil, nil)
 				blocks = append(blocks, block)
 
-				state.Index.Height += 1
-				state.Index.ID = block.ID()
+				state, au = consensus.ApplyBlock(state, block, f.store.SupplementTipBlock(block), time.Time{})
+				f.applyUpdates(nil, []chain.ApplyUpdate{{ApplyUpdate: au}})
+				f.updateProofs(au)
 			}
 
 			log.Println("REORG!")
 			// log.Println("BEFORE:", f.cm.Tip())
-			f.applyBlocks(blocks)
+			f.addBlocks(blocks)
 			// log.Println("AFTER:", f.cm.Tip())
 		} else {
 			cpy, err := deep.Copy(prevState{f.cm.TipState(), f.accs, f.contracts})
@@ -280,17 +282,13 @@ func (f *Fuzzer) Run(iterations int) {
 			f.prevs = append(f.prevs, cpy)
 
 			cs := f.cm.TipState()
-
-			txns := f.randTxns(cs)
-			if _, err := f.cm.AddV2PoolTransactions(cs.Index, f.randV2Txns(cs)); err != nil {
-				panic(err)
-			}
-			block := f.mineBlock(cs, f.randAddr(types.VoidAddress), txns, f.cm.V2PoolTransactions())
-
+			block := f.mineBlock(cs, types.VoidAddress, f.randTxns(cs), f.randV2Txns(cs))
 			_, au := consensus.ApplyBlock(cs, block, f.store.SupplementTipBlock(block), time.Time{})
+
+			f.applyUpdates(nil, []chain.ApplyUpdate{{ApplyUpdate: au}})
 			f.updateProofs(au)
 
-			f.applyBlocks([]types.Block{block})
+			f.addBlocks([]types.Block{block})
 		}
 		log.Println(f.cm.Tip())
 	}

@@ -3,7 +3,6 @@ package randgen
 import (
 	"encoding/json"
 	"log"
-	"math"
 	"math/bits"
 	"os"
 	"time"
@@ -163,7 +162,7 @@ func (f *Fuzzer) signV2Txn(priv types.PrivateKey, cs consensus.State, txn *types
 	}
 }
 
-func (f *Fuzzer) applyBlocks(b []types.Block) {
+func (f *Fuzzer) addBlocks(b []types.Block) {
 	defer func() {
 		if err := recover(); err != nil {
 			file, err := os.Create("crasher.json")
@@ -184,15 +183,15 @@ func (f *Fuzzer) applyBlocks(b []types.Block) {
 		}
 	}()
 
-	prev := f.cm.Tip()
+	// prev := f.cm.Tip()
 	if err := f.cm.AddBlocks(b); err != nil {
 		panic(err)
 	}
-	crus, caus, err := f.cm.UpdatesSince(prev, math.MaxInt64)
-	if err != nil {
-		panic(err)
-	}
-	f.applyUpdates(crus, caus)
+	// crus, caus, err := f.cm.UpdatesSince(prev, math.MaxInt64)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// f.applyUpdates(crus, caus)
 
 	f.appliedBlocks = append(f.appliedBlocks, b...)
 }
