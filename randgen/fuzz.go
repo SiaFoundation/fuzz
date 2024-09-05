@@ -4,7 +4,6 @@ import (
 	"log"
 	"math"
 	"math/rand"
-	"time"
 
 	"github.com/brunoga/deep"
 
@@ -57,6 +56,7 @@ func (a *Account) Balance() (sc types.Currency, sf uint64) {
 
 type prevState struct {
 	State       consensus.State
+	BlockIndex  int
 	Accs        map[types.Address]Account
 	Contracts   map[types.FileContractID]types.FileContractElement
 	V2Contracts map[types.FileContractID]types.V2FileContractElement
@@ -124,6 +124,7 @@ func (f *Fuzzer) randSF() uint64 {
 
 func (f *Fuzzer) applyUpdates(crus []chain.RevertUpdate, caus []chain.ApplyUpdate) {
 	for _, cru := range crus {
+		f.updateProofs(cru)
 		// log.Println("Reorg update")
 		cru.ForEachSiacoinElement(func(sce types.SiacoinElement, created, spent bool) {
 			if acc, ok := f.accs[sce.SiacoinOutput.Address]; !ok {
@@ -167,6 +168,7 @@ func (f *Fuzzer) applyUpdates(crus []chain.RevertUpdate, caus []chain.ApplyUpdat
 		})
 	}
 	for _, cau := range caus {
+		f.updateProofs(cau)
 		cau.ForEachSiacoinElement(func(sce types.SiacoinElement, created, spent bool) {
 			if acc, ok := f.accs[sce.SiacoinOutput.Address]; !ok {
 				return
@@ -253,9 +255,9 @@ func (f *Fuzzer) updateProofs(update chainUpdate) {
 		f.contracts[fcid] = e
 	}
 	for fcid := range f.v2contracts {
-		e := f.contracts[fcid]
+		e := f.v2contracts[fcid]
 		update.UpdateElementProof(&e.StateElement)
-		f.contracts[fcid] = e
+		f.v2contracts[fcid] = e
 	}
 	for _, acc := range f.accs {
 		for scid := range acc.SCUtxos {
@@ -290,37 +292,37 @@ func (f *Fuzzer) Run(iterations int) {
 			f.contracts = cpy.Contracts
 			f.v2contracts = cpy.V2Contracts
 
+			store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), f.network, f.genesis)
+			if err != nil {
+				panic(err)
+			}
+			cm := chain.NewManager(store, genesisState)
+			if err := cm.AddBlocks(f.appliedBlocks[:cpy.BlockIndex]); err != nil {
+				panic(err)
+			}
+
+			log.Println("REORG!")
+
 			var blocks []types.Block
-			var au consensus.ApplyUpdate
 			extra := f.cm.Tip().Height - state.Index.Height + 1
 			for i := uint64(0); i < extra; i++ {
 				block := f.mineBlock(state, types.VoidAddress, nil, nil)
 				blocks = append(blocks, block)
 
-				state, au = consensus.ApplyBlock(state, block, f.store.SupplementTipBlock(block), time.Time{})
-				f.applyUpdates(nil, []chain.ApplyUpdate{{ApplyUpdate: au}})
-				f.updateProofs(au)
+				f.addBlocks(cm, []types.Block{block})
 			}
-
-			log.Println("REORG!")
-			// log.Println("BEFORE:", f.cm.Tip())
-			f.addBlocks(blocks)
-			// log.Println("AFTER:", f.cm.Tip())
+			f.addBlocks(f.cm, blocks)
 		} else {
-			cpy, err := deep.Copy(prevState{f.cm.TipState(), f.accs, f.contracts, f.v2contracts})
+			cpy, err := deep.Copy(prevState{f.cm.TipState(), len(f.appliedBlocks), f.accs, f.contracts, f.v2contracts})
 			if err != nil {
 				panic(err)
 			}
 			f.prevs = append(f.prevs, cpy)
 
 			cs := f.cm.TipState()
-			block := f.mineBlock(cs, types.VoidAddress, nil, f.randV2Txns(cs))
-			_, au := consensus.ApplyBlock(cs, block, f.store.SupplementTipBlock(block), time.Time{})
+			block := f.mineBlock(cs, types.VoidAddress, f.randTxns(cs), f.randV2Txns(cs))
 
-			f.applyUpdates(nil, []chain.ApplyUpdate{{ApplyUpdate: au}})
-			f.updateProofs(au)
-
-			f.addBlocks([]types.Block{block})
+			f.addBlocks(f.cm, []types.Block{block})
 		}
 		log.Println(f.cm.Tip())
 	}

@@ -3,6 +3,7 @@ package randgen
 import (
 	"encoding/json"
 	"log"
+	"math"
 	"math/bits"
 	"os"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
 	"go.sia.tech/coreutils"
+	"go.sia.tech/coreutils/chain"
 )
 
 // copied from rhp/v2 to avoid import cycle
@@ -162,7 +164,7 @@ func (f *Fuzzer) signV2Txn(priv types.PrivateKey, cs consensus.State, txn *types
 	}
 }
 
-func (f *Fuzzer) addBlocks(b []types.Block) {
+func (f *Fuzzer) addBlocks(cm *chain.Manager, b []types.Block) {
 	defer func() {
 		if err := recover(); err != nil {
 			file, err := os.Create("crasher.json")
@@ -183,15 +185,15 @@ func (f *Fuzzer) addBlocks(b []types.Block) {
 		}
 	}()
 
-	// prev := f.cm.Tip()
-	if err := f.cm.AddBlocks(b); err != nil {
+	prev := cm.Tip()
+	if err := cm.AddBlocks(b); err != nil {
 		panic(err)
 	}
-	// crus, caus, err := f.cm.UpdatesSince(prev, math.MaxInt64)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// f.applyUpdates(crus, caus)
+	crus, caus, err := cm.UpdatesSince(prev, math.MaxInt64)
+	if err != nil {
+		panic(err)
+	}
+	f.applyUpdates(crus, caus)
 
 	f.appliedBlocks = append(f.appliedBlocks, b...)
 }
