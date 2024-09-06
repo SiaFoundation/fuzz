@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	probReorg       = 0.5
+	probReorg       = 0.0
 	probTransaction = 0.5
 
 	probSC       = 0.3
@@ -124,7 +124,6 @@ func (f *Fuzzer) randSF() uint64 {
 
 func (f *Fuzzer) applyUpdates(crus []chain.RevertUpdate, caus []chain.ApplyUpdate) {
 	for _, cru := range crus {
-		f.updateProofs(cru)
 		// log.Println("Reorg update")
 		cru.ForEachSiacoinElement(func(sce types.SiacoinElement, created, spent bool) {
 			if acc, ok := f.accs[sce.SiacoinOutput.Address]; !ok {
@@ -166,9 +165,9 @@ func (f *Fuzzer) applyUpdates(crus []chain.RevertUpdate, caus []chain.ApplyUpdat
 				f.v2contracts[id] = fce
 			}
 		})
+		f.updateProofs(cru)
 	}
 	for _, cau := range caus {
-		f.updateProofs(cau)
 		cau.ForEachSiacoinElement(func(sce types.SiacoinElement, created, spent bool) {
 			if acc, ok := f.accs[sce.SiacoinOutput.Address]; !ok {
 				return
@@ -209,6 +208,7 @@ func (f *Fuzzer) applyUpdates(crus []chain.RevertUpdate, caus []chain.ApplyUpdat
 				delete(f.v2contracts, id)
 			}
 		})
+		f.updateProofs(cau)
 	}
 }
 
@@ -282,6 +282,7 @@ func (f *Fuzzer) Run(iterations int) {
 	f.applyUpdates(crus, caus)
 
 	for i := 0; i < iterations; i++ {
+		prev := f.cm.Tip()
 		if len(f.prevs) > 0 && f.prob(probReorg) {
 			cpy, err := deep.Copy(f.prevs[f.rng.Intn(len(f.prevs))])
 			if err != nil {
@@ -325,5 +326,11 @@ func (f *Fuzzer) Run(iterations int) {
 			f.addBlocks(f.cm, []types.Block{block})
 		}
 		log.Println(f.cm.Tip())
+
+		_, caus, err := f.cm.UpdatesSince(prev, math.MaxInt64)
+		if err != nil {
+			panic(err)
+		}
+		f.applyUpdates(nil, caus)
 	}
 }

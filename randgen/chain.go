@@ -3,7 +3,6 @@ package randgen
 import (
 	"encoding/json"
 	"log"
-	"math"
 	"math/bits"
 	"os"
 	"time"
@@ -185,16 +184,9 @@ func (f *Fuzzer) addBlocks(cm *chain.Manager, b []types.Block) {
 		}
 	}()
 
-	prev := cm.Tip()
 	if err := cm.AddBlocks(b); err != nil {
 		panic(err)
 	}
-	crus, caus, err := cm.UpdatesSince(prev, math.MaxInt64)
-	if err != nil {
-		panic(err)
-	}
-	f.applyUpdates(crus, caus)
-
 	f.appliedBlocks = append(f.appliedBlocks, b...)
 }
 
