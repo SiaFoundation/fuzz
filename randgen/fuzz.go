@@ -253,9 +253,9 @@ func (f *Fuzzer) updateProofs(update chainUpdate) {
 		f.contracts[fcid] = e
 	}
 	for fcid := range f.v2contracts {
-		e := f.contracts[fcid]
+		e := f.v2contracts[fcid]
 		update.UpdateElementProof(&e.StateElement)
-		f.contracts[fcid] = e
+		f.v2contracts[fcid] = e
 	}
 	for _, acc := range f.accs {
 		for scid := range acc.SCUtxos {
@@ -297,6 +297,9 @@ func (f *Fuzzer) Run(iterations int) {
 				block := f.mineBlock(state, types.VoidAddress, nil, nil)
 				blocks = append(blocks, block)
 
+				if err := consensus.ValidateBlock(state, block, f.store.SupplementTipBlock(block)); err != nil {
+					panic("validation error")
+				}
 				state, au = consensus.ApplyBlock(state, block, f.store.SupplementTipBlock(block), time.Time{})
 				f.applyUpdates(nil, []chain.ApplyUpdate{{ApplyUpdate: au}})
 				f.updateProofs(au)
