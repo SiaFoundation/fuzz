@@ -2,8 +2,6 @@ module go.sia.tech/fuzz
 
 go 1.22.0
 
-replace go.sia.tech/core => ./core
-
 require (
 	github.com/brunoga/deep v1.2.4
 	go.sia.tech/core v0.4.4
