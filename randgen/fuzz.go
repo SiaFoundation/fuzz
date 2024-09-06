@@ -298,7 +298,7 @@ func (f *Fuzzer) Run(iterations int) {
 				blocks = append(blocks, block)
 
 				if err := consensus.ValidateBlock(state, block, f.store.SupplementTipBlock(block)); err != nil {
-					panic("validation error")
+					panic(err)
 				}
 				state, au = consensus.ApplyBlock(state, block, f.store.SupplementTipBlock(block), time.Time{})
 				f.applyUpdates(nil, []chain.ApplyUpdate{{ApplyUpdate: au}})
