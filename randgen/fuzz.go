@@ -317,7 +317,7 @@ func (f *Fuzzer) Run(iterations int) {
 			f.prevs = append(f.prevs, cpy)
 
 			cs := f.cm.TipState()
-			block := f.mineBlock(cs, types.VoidAddress, nil, f.randV2Txns(cs))
+			block := f.mineBlock(cs, types.VoidAddress, f.randTxns(cs), f.randV2Txns(cs))
 			_, au := consensus.ApplyBlock(cs, block, f.store.SupplementTipBlock(block), time.Time{})
 
 			f.applyUpdates(nil, []chain.ApplyUpdate{{ApplyUpdate: au}})
