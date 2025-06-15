@@ -93,6 +93,10 @@ func (n *testChain) tipState() consensus.State {
 	return n.states[len(n.states)-1]
 }
 
+func (n *testChain) tip() types.ChainIndex {
+	return n.states[len(n.states)-1].Index
+}
+
 func (n *testChain) applyBlock(b types.Block) consensus.ApplyUpdate {
 	cs := n.tipState()
 	bs := n.store.SupplementTipBlock(b)
@@ -139,7 +143,7 @@ func (n *testChain) mineTransactions(txns []types.Transaction, v2Txns []types.V2
 
 // signTransactionWithContracts signs a transaction using the specified private
 // keys, including contract revisions.
-func signTransactionWithContracts(cs consensus.State, pk, renterPK, hostPK types.PrivateKey, txn *types.Transaction) {
+func signTransactionWithContracts(cs consensus.State, pk types.PrivateKey, txn *types.Transaction) {
 	appendSig := func(key types.PrivateKey, pubkeyIndex uint64, parentID types.Hash256) {
 		sig := key.SignHash(cs.WholeSigHash(*txn, parentID, pubkeyIndex, 0, nil))
 		txn.Signatures = append(txn.Signatures, types.TransactionSignature{
@@ -156,23 +160,13 @@ func signTransactionWithContracts(cs consensus.State, pk, renterPK, hostPK types
 		appendSig(pk, 0, types.Hash256(txn.SiafundInputs[i].ParentID))
 	}
 	for i := range txn.FileContractRevisions {
-		appendSig(renterPK, 0, types.Hash256(txn.FileContractRevisions[i].ParentID))
-		appendSig(hostPK, 1, types.Hash256(txn.FileContractRevisions[i].ParentID))
+		appendSig(pk, 0, types.Hash256(txn.FileContractRevisions[i].ParentID))
 	}
-}
-
-// signTransaction signs a transaction that does not have any revisions with
-// the specified private key.
-func signTransaction(cs consensus.State, pk types.PrivateKey, txn *types.Transaction) {
-	if len(txn.FileContractRevisions) > 0 {
-		panic("use signTransactionWithContracts instead")
-	}
-	signTransactionWithContracts(cs, pk, types.PrivateKey{}, types.PrivateKey{}, txn)
 }
 
 // signV2TransactionWithContracts signs a transaction using the specified
 // private keys, including contracts and revisions.
-func signV2TransactionWithContracts(cs consensus.State, pk, renterPK, hostPK types.PrivateKey, txn *types.V2Transaction) {
+func signV2TransactionWithContracts(cs consensus.State, pk types.PrivateKey, txn *types.V2Transaction) {
 	for i := range txn.SiacoinInputs {
 		txn.SiacoinInputs[i].SatisfiedPolicy.Signatures = []types.Signature{pk.SignHash(cs.InputSigHash(*txn))}
 	}
@@ -180,28 +174,19 @@ func signV2TransactionWithContracts(cs consensus.State, pk, renterPK, hostPK typ
 		txn.SiafundInputs[i].SatisfiedPolicy.Signatures = []types.Signature{pk.SignHash(cs.InputSigHash(*txn))}
 	}
 	for i := range txn.FileContracts {
-		txn.FileContracts[i].RenterSignature = renterPK.SignHash(cs.ContractSigHash(txn.FileContracts[i]))
-		txn.FileContracts[i].HostSignature = hostPK.SignHash(cs.ContractSigHash(txn.FileContracts[i]))
+		txn.FileContracts[i].RenterSignature = pk.SignHash(cs.ContractSigHash(txn.FileContracts[i]))
+		txn.FileContracts[i].HostSignature = pk.SignHash(cs.ContractSigHash(txn.FileContracts[i]))
 	}
 	for i := range txn.FileContractRevisions {
-		txn.FileContractRevisions[i].Revision.RenterSignature = renterPK.SignHash(cs.ContractSigHash(txn.FileContractRevisions[i].Revision))
-		txn.FileContractRevisions[i].Revision.HostSignature = hostPK.SignHash(cs.ContractSigHash(txn.FileContractRevisions[i].Revision))
+		txn.FileContractRevisions[i].Revision.RenterSignature = pk.SignHash(cs.ContractSigHash(txn.FileContractRevisions[i].Revision))
+		txn.FileContractRevisions[i].Revision.HostSignature = pk.SignHash(cs.ContractSigHash(txn.FileContractRevisions[i].Revision))
 	}
 	for i := range txn.FileContractResolutions {
 		if r, ok := txn.FileContractResolutions[i].Resolution.(*types.V2FileContractRenewal); ok {
-			r.RenterSignature = renterPK.SignHash(cs.RenewalSigHash(*r))
-			r.HostSignature = hostPK.SignHash(cs.RenewalSigHash(*r))
-			r.NewContract.RenterSignature = renterPK.SignHash(cs.ContractSigHash(r.NewContract))
-			r.NewContract.HostSignature = hostPK.SignHash(cs.ContractSigHash(r.NewContract))
+			r.RenterSignature = pk.SignHash(cs.RenewalSigHash(*r))
+			r.HostSignature = pk.SignHash(cs.RenewalSigHash(*r))
+			r.NewContract.RenterSignature = pk.SignHash(cs.ContractSigHash(r.NewContract))
+			r.NewContract.HostSignature = pk.SignHash(cs.ContractSigHash(r.NewContract))
 		}
 	}
-}
-
-// signV2Transaction signs a transaction that does not have any contracts with
-// the specified private key.
-func signV2Transaction(cs consensus.State, pk types.PrivateKey, txn *types.V2Transaction) {
-	if len(txn.FileContracts) > 0 || len(txn.FileContractRevisions) > 0 {
-		panic("use signV2Transaction instead")
-	}
-	signV2TransactionWithContracts(cs, pk, types.PrivateKey{}, types.PrivateKey{}, txn)
 }

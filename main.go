@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"time"
 
+	proto2 "go.sia.tech/core/rhp/v2"
+
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
 )
@@ -21,6 +23,7 @@ type fuzzer struct {
 
 	sces   map[types.SiacoinOutputID]types.SiacoinElement
 	sfes   map[types.SiafundOutputID]types.SiafundElement
+	fces   map[types.FileContractID]types.FileContractElement
 	v2fces map[types.FileContractID]types.V2FileContractElement
 }
 
@@ -47,6 +50,7 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey) *fuzzer {
 
 		sces:   make(map[types.SiacoinOutputID]types.SiacoinElement),
 		sfes:   make(map[types.SiafundOutputID]types.SiafundElement),
+		fces:   make(map[types.FileContractID]types.FileContractElement),
 		v2fces: make(map[types.FileContractID]types.V2FileContractElement),
 	}
 
@@ -86,15 +90,29 @@ func (f *fuzzer) processApplyUpdate(au consensus.ApplyUpdate) {
 			f.sfes[id] = diff.SiafundElement.Copy()
 		}
 	}
+	for _, diff := range au.FileContractElementDiffs() {
+		id := diff.FileContractElement.ID
+		if diff.Created {
+			f.fces[id] = diff.FileContractElement.Copy()
+		} else if diff.Revision != nil {
+			diff.FileContractElement.FileContract = *diff.Revision
+			f.fces[id] = diff.FileContractElement.Copy()
+		} else if diff.Resolved {
+			delete(f.fces, id)
+		}
+	}
 
 	for id, sce := range f.sces {
 		au.UpdateElementProof(&sce.StateElement)
 		f.sces[id] = sce.Copy()
 	}
-
 	for id, sfe := range f.sfes {
 		au.UpdateElementProof(&sfe.StateElement)
 		f.sfes[id] = sfe.Copy()
+	}
+	for id, fce := range f.fces {
+		au.UpdateElementProof(&fce.StateElement)
+		f.fces[id] = fce.Copy()
 	}
 }
 
@@ -127,6 +145,16 @@ func (f *fuzzer) processRevertUpdate(ru consensus.RevertUpdate) {
 			delete(f.sfes, id)
 		}
 	}
+	for _, diff := range ru.FileContractElementDiffs() {
+		id := diff.FileContractElement.ID
+		if diff.Created {
+			delete(f.fces, id)
+		} else if diff.Revision != nil {
+			f.fces[id] = diff.FileContractElement.Copy()
+		} else if diff.Resolved {
+			f.fces[id] = diff.FileContractElement.Copy()
+		}
+	}
 
 	for id, sce := range f.sces {
 		ru.UpdateElementProof(&sce.StateElement)
@@ -136,11 +164,88 @@ func (f *fuzzer) processRevertUpdate(ru consensus.RevertUpdate) {
 		ru.UpdateElementProof(&sfe.StateElement)
 		f.sfes[id] = sfe.Copy()
 	}
+	for id, fce := range f.fces {
+		ru.UpdateElementProof(&fce.StateElement)
+		f.fces[id] = fce.Copy()
+	}
+}
+
+func prepareContract(addr types.Address, endHeight uint64) types.FileContract {
+	rk := types.GeneratePrivateKey().PublicKey()
+	rAddr := types.StandardUnlockHash(rk)
+	hk := types.GeneratePrivateKey().PublicKey()
+	hs := proto2.HostSettings{
+		WindowSize: 1,
+		Address:    types.StandardUnlockHash(hk),
+	}
+	sc := types.Siacoins(1)
+	fc := proto2.PrepareContractFormation(rk, hk, sc.Mul64(2), sc.Mul64(2), endHeight, hs, rAddr)
+	fc.UnlockHash = addr
+	return fc
 }
 
 func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	{
-		var amount types.Currency
+		count := f.rng.Intn(2)
+		for _, fce := range f.fces {
+			if len(txn.StorageProofs) >= count {
+				break
+			}
+
+			fc := fce.FileContract
+			height := f.n.tip().Height
+			if height < fc.WindowStart {
+				continue
+			}
+			txn.StorageProofs = append(txn.StorageProofs, types.StorageProof{
+				ParentID: fce.ID,
+			})
+			delete(f.fces, fce.ID)
+		}
+		if len(txn.StorageProofs) > 0 {
+			// can't have storage proofs and outputs in one transaction
+			return
+		}
+	}
+	var amount types.Currency
+	{
+		for i := 0; i < f.rng.Intn(3); i++ {
+			fc := prepareContract(f.addr, f.n.tip().Height+10)
+			txn.FileContracts = append(txn.FileContracts, fc)
+			amount = amount.Add(fc.Payout)
+		}
+	}
+	{
+		i := 0
+		count := f.rng.Intn(3)
+		for _, fce := range f.fces {
+			if i > count {
+				break
+			}
+
+			fc := fce.FileContract
+			height := f.n.tip().Height
+			if fc.WindowStart >= height {
+				continue
+			}
+			fc.RevisionNumber++
+			fc.WindowStart = height + 10
+			fc.WindowEnd = fc.WindowStart + 10
+			txn.FileContractRevisions = append(txn.FileContractRevisions, types.FileContractRevision{
+				ParentID:         fce.ID,
+				UnlockConditions: f.uc,
+				FileContract:     fc,
+			})
+			f.fces[fce.ID] = types.FileContractElement{
+				ID:           fce.ID,
+				StateElement: fce.StateElement,
+				FileContract: fc,
+			}
+
+			i++
+		}
+	}
+	{
 		for i := 0; i < f.rng.Intn(3); i++ {
 			sco := types.SiacoinOutput{
 				Address: f.addr,
@@ -205,7 +310,7 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 			}
 		}
 	}
-	signTransactionWithContracts(f.n.tipState(), f.pk, f.pk, f.pk, &txn)
+	signTransactionWithContracts(f.n.tipState(), f.pk, &txn)
 
 	for i, sco := range txn.SiacoinOutputs {
 		id := txn.SiacoinOutputID(i)
@@ -225,6 +330,16 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 				LeafIndex: types.UnassignedLeafIndex,
 			},
 			SiafundOutput: sfo,
+		}
+	}
+	for i, fc := range txn.FileContracts {
+		id := txn.FileContractID(i)
+		f.fces[id] = types.FileContractElement{
+			ID: id,
+			StateElement: types.StateElement{
+				LeafIndex: types.UnassignedLeafIndex,
+			},
+			FileContract: fc,
 		}
 	}
 	return
@@ -299,7 +414,7 @@ func (f *fuzzer) generateV2Transaction() (txn types.V2Transaction) {
 	}
 	// so we don't get "transactions cannot be empty"
 	txn.ArbitraryData = []byte("1234")
-	signV2TransactionWithContracts(f.n.tipState(), f.pk, f.pk, f.pk, &txn)
+	signV2TransactionWithContracts(f.n.tipState(), f.pk, &txn)
 
 	for i := range txn.SiacoinOutputs {
 		sce := txn.EphemeralSiacoinOutput(i)
