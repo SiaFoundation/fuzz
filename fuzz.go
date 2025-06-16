@@ -82,6 +82,9 @@ func (f *fuzzer) mineBlock() {
 
 	var v2Txns []types.V2Transaction
 	if f.n.tip().Height >= f.n.network.HardforkV2.AllowHeight {
+		// we modify f.v2fces as we go and revise contracts but the Parent
+		// field must be the parent at the start of the block for all revisions
+		// in a block even if there are multiple
 		originalParents := make(map[types.FileContractID]types.V2FileContractElement)
 		for i := 0; i < f.rng.Intn(20); i++ {
 			v2Txns = append(v2Txns, f.generateV2Transaction(originalParents))

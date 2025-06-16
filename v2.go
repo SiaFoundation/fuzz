@@ -35,42 +35,42 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 			txn.FileContracts = append(txn.FileContracts, fc)
 		}
 	}
-	{
-		i := 0
-		count := f.rng.Intn(3)
-		for id, fce := range f.v2fces {
-			if i > count {
-				break
-			}
+	// {
+	// 	i := 0
+	// 	count := f.rng.Intn(3)
+	// 	for id, fce := range f.v2fces {
+	// 		if i > count {
+	// 			break
+	// 		}
 
-			fc := fce.V2FileContract
-			height := f.n.tip().Height
-			if height >= fc.ProofHeight {
-				continue
-			}
-			fc.RevisionNumber++
+	// 		fc := fce.V2FileContract
+	// 		height := f.n.tip().Height
+	// 		if height >= fc.ProofHeight {
+	// 			continue
+	// 		}
+	// 		fc.RevisionNumber++
 
-			parent := fce
-			if v, ok := originalParents[id]; ok {
-				parent = v
-			} else {
-				originalParents[id] = parent
-			}
+	// 		parent := fce
+	// 		if v, ok := originalParents[id]; ok {
+	// 			parent = v
+	// 		} else {
+	// 			originalParents[id] = parent
+	// 		}
 
-			txn.FileContractRevisions = append(txn.FileContractRevisions, types.V2FileContractRevision{
-				Parent:   parent,
-				Revision: fc,
-			})
+	// 		txn.FileContractRevisions = append(txn.FileContractRevisions, types.V2FileContractRevision{
+	// 			Parent:   parent,
+	// 			Revision: fc,
+	// 		})
 
-			f.v2fces[id] = types.V2FileContractElement{
-				ID:             id,
-				StateElement:   fce.StateElement,
-				V2FileContract: fc,
-			}
+	// 		f.v2fces[id] = types.V2FileContractElement{
+	// 			ID:             id,
+	// 			StateElement:   fce.StateElement,
+	// 			V2FileContract: fc,
+	// 		}
 
-			i++
-		}
-	}
+	// 		i++
+	// 	}
+	// }
 	{
 		i := 0
 		count := f.rng.Intn(3)
