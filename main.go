@@ -22,6 +22,7 @@ type fuzzer struct {
 	addr   types.Address
 	policy types.SpendPolicy
 
+	cies   []types.ChainIndexElement
 	sces   map[types.SiacoinOutputID]types.SiacoinElement
 	sfes   map[types.SiafundOutputID]types.SiafundElement
 	fces   map[types.FileContractID]types.FileContractElement
@@ -33,7 +34,7 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey) *fuzzer {
 	addr := uc.UnlockHash()
 
 	n := newTestChain(false, func(network *consensus.Network, genesisBlock types.Block) {
-		network.HardforkV2.AllowHeight = 1
+		network.HardforkV2.AllowHeight = 100
 		network.HardforkV2.RequireHeight = 10000
 		genesisBlock.Transactions[0].SiacoinOutputs[0].Address = addr
 		genesisBlock.Transactions[0].SiafundOutputs[0].Address = addr
@@ -117,6 +118,7 @@ func (f *fuzzer) processApplyUpdate(au consensus.ApplyUpdate) {
 			delete(f.v2fces, id)
 		}
 	}
+	f.cies = append(f.cies, au.ChainIndexElement())
 
 	for id, sce := range f.sces {
 		au.UpdateElementProof(&sce.StateElement)
@@ -133,6 +135,10 @@ func (f *fuzzer) processApplyUpdate(au consensus.ApplyUpdate) {
 	for id, fce := range f.v2fces {
 		au.UpdateElementProof(&fce.StateElement)
 		f.v2fces[id] = fce.Copy()
+	}
+	for i, cie := range f.cies {
+		au.UpdateElementProof(&cie.StateElement)
+		f.cies[i] = cie
 	}
 }
 
@@ -185,6 +191,7 @@ func (f *fuzzer) processRevertUpdate(ru consensus.RevertUpdate) {
 			f.v2fces[id] = diff.V2FileContractElement.Copy()
 		}
 	}
+	f.cies = f.cies[:len(f.cies)-1]
 
 	for id, sce := range f.sces {
 		ru.UpdateElementProof(&sce.StateElement)
@@ -201,6 +208,10 @@ func (f *fuzzer) processRevertUpdate(ru consensus.RevertUpdate) {
 	for id, fce := range f.v2fces {
 		ru.UpdateElementProof(&fce.StateElement)
 		f.v2fces[id] = fce.Copy()
+	}
+	for i, cie := range f.cies {
+		ru.UpdateElementProof(&cie.StateElement)
+		f.cies[i] = cie
 	}
 }
 
@@ -388,6 +399,8 @@ func prepareV2Contract(renterPK, hostPK types.PrivateKey, proofHeight uint64) (t
 		RenterPublicKey: renterPK.PublicKey(),
 	}, hostPK.PublicKey(), types.StandardUnlockConditions(hostPK.PublicKey()).UnlockHash())
 	fc.ExpirationHeight = fc.ProofHeight + 1
+	fc.RenterOutput.Address = types.VoidAddress
+	fc.HostOutput.Address = types.VoidAddress
 
 	payout := fc.RenterOutput.Value.Add(fc.HostOutput.Value).Add(consensus.State{}.V2FileContractTax(fc))
 	return fc, payout
@@ -435,6 +448,103 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 				StateElement:   fce.StateElement,
 				V2FileContract: fc,
 			}
+
+			i++
+		}
+	}
+	{
+		i := 0
+		count := f.rng.Intn(3)
+		for id, fce := range f.v2fces {
+			if i > count {
+				break
+			}
+
+			fc := fce.V2FileContract
+			height := f.n.tip().Height
+			if height < fc.ProofHeight {
+				continue
+			}
+			fc.RevisionNumber++
+
+			parent := fce
+			if v, ok := originalParents[id]; ok {
+				parent = v
+			} else {
+				originalParents[id] = parent
+			}
+
+			txn.FileContractResolutions = append(txn.FileContractResolutions, types.V2FileContractResolution{
+				Parent: parent,
+				Resolution: &types.V2StorageProof{
+					ProofIndex: f.cies[fc.ProofHeight],
+				},
+			})
+			delete(f.v2fces, id)
+
+			i++
+		}
+	}
+	{
+		i := 0
+		count := f.rng.Intn(3)
+		for id, fce := range f.v2fces {
+			if i > count {
+				break
+			}
+
+			fc := fce.V2FileContract
+			height := f.n.tip().Height
+			if height < fc.ProofHeight {
+				continue
+			}
+			fc.RevisionNumber++
+
+			parent := fce
+			if v, ok := originalParents[id]; ok {
+				parent = v
+			} else {
+				originalParents[id] = parent
+			}
+
+			txn.FileContractResolutions = append(txn.FileContractResolutions, types.V2FileContractResolution{
+				Parent: parent,
+				Resolution: &types.V2StorageProof{
+					ProofIndex: f.cies[fc.ProofHeight],
+				},
+			})
+			delete(f.v2fces, id)
+
+			i++
+		}
+	}
+	{
+		i := 0
+		count := f.rng.Intn(3)
+		for id, fce := range f.v2fces {
+			if i > count {
+				break
+			}
+
+			fc := fce.V2FileContract
+			height := f.n.tip().Height
+			if height < fc.ExpirationHeight {
+				continue
+			}
+			fc.RevisionNumber++
+
+			parent := fce
+			if v, ok := originalParents[id]; ok {
+				parent = v
+			} else {
+				originalParents[id] = parent
+			}
+
+			txn.FileContractResolutions = append(txn.FileContractResolutions, types.V2FileContractResolution{
+				Parent:     parent,
+				Resolution: &types.V2FileContractExpiration{},
+			})
+			delete(f.v2fces, id)
 
 			i++
 		}
@@ -521,14 +631,16 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 
 func (f *fuzzer) mineBlock() {
 	var txns []types.Transaction
-	for i := 0; i < f.rng.Intn(10); i++ {
+	for i := 0; i < f.rng.Intn(20); i++ {
 		txns = append(txns, f.generateTransaction())
 	}
 
 	var v2Txns []types.V2Transaction
-	originalParents := make(map[types.FileContractID]types.V2FileContractElement)
-	for i := 0; i < f.rng.Intn(10); i++ {
-		v2Txns = append(v2Txns, f.generateV2Transaction(originalParents))
+	if f.n.tip().Height >= f.n.network.HardforkV2.AllowHeight {
+		originalParents := make(map[types.FileContractID]types.V2FileContractElement)
+		for i := 0; i < f.rng.Intn(20); i++ {
+			v2Txns = append(v2Txns, f.generateV2Transaction(originalParents))
+		}
 	}
 
 	b := mineBlock(f.n.tipState(), txns, v2Txns, types.VoidAddress)
@@ -550,12 +662,12 @@ func main() {
 	f := newFuzzer(rng, pk)
 
 	for i := 0; i < 500; i++ {
-		log.Println("Mining:", i)
-		f.mineBlock()
-
-		if f.prob(0.2) {
+		if f.n.tip().Height > 0 && f.prob(0.2) {
 			log.Println("Reverting:", i)
 			f.revertBlock()
+		} else {
+			log.Println("Mining:", i)
+			f.mineBlock()
 		}
 	}
 }
