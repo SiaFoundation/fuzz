@@ -27,6 +27,12 @@ type state struct {
 	Blocks []block
 }
 
+func stateHash(cs consensus.State) types.Hash256 {
+	h := types.NewHasher()
+	cs.EncodeTo(h.E)
+	return h.Sum()
+}
+
 func fuzzCommand() {
 	rng := rand.New(rand.NewSource(1))
 
@@ -59,6 +65,7 @@ func fuzzCommand() {
 	for i := 0; i < 1000; i++ {
 		{
 			log.Println("Mining:", f.n.tip().Height)
+			log.Printf("Current state: %v", stateHash(f.n.states[len(f.n.states)-1]))
 
 			b := f.mineBlock()
 			s.Blocks = append(s.Blocks, block{
@@ -106,7 +113,7 @@ func reproCommand(path string) {
 		if cs.Index.Height != math.MaxUint64 {
 			// don't validate genesis block
 			if b.V2 != nil {
-				log.Printf("Parent state: %v, got commitment hash: %v", cs.Index, b.V2.Commitment)
+				log.Printf("Parent state: %v (%v), got commitment hash: %v", cs.Index, stateHash(cs), b.V2.Commitment)
 				expected := cs.Commitment(b.MinerPayouts[0].Address, b.Transactions, b.V2Transactions())
 				if b.V2.Commitment != expected {
 					log.Fatalf("commitment hash mismatch: expected %v, got %v", expected, b.V2.Commitment)
@@ -144,6 +151,7 @@ func reproCommand(path string) {
 
 	for i, b := range s.Blocks {
 		log.Println("Applying:", i)
+		log.Printf("Current state: %v", stateHash(states[len(states)-1]))
 
 		// apply block first
 		apply(b.Block)

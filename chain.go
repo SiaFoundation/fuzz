@@ -107,7 +107,7 @@ func (n *testChain) applyBlock(b types.Block) consensus.ApplyUpdate {
 			panic(err)
 		}
 		if b.V2 != nil {
-			log.Printf("Parent state: %v, got commitment hash: %v", cs.Index, b.V2.Commitment)
+			log.Printf("Parent state: %v (%v), got commitment hash: %v", cs.Index, stateHash(cs), b.V2.Commitment)
 		}
 	}
 
