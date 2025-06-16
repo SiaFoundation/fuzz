@@ -7,6 +7,7 @@ import (
 	"time"
 
 	proto2 "go.sia.tech/core/rhp/v2"
+	proto4 "go.sia.tech/core/rhp/v4"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
@@ -61,6 +62,10 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey) *fuzzer {
 	return f
 }
 
+func (f *fuzzer) prob(p float64) bool {
+	return f.rng.Float64() < p
+}
+
 func (f *fuzzer) processApplyUpdate(au consensus.ApplyUpdate) {
 	for _, diff := range au.SiacoinElementDiffs() {
 		if diff.SiacoinElement.SiacoinOutput.Address != f.addr {
@@ -101,6 +106,17 @@ func (f *fuzzer) processApplyUpdate(au consensus.ApplyUpdate) {
 			delete(f.fces, id)
 		}
 	}
+	for _, diff := range au.V2FileContractElementDiffs() {
+		id := diff.V2FileContractElement.ID
+		if diff.Created {
+			f.v2fces[id] = diff.V2FileContractElement.Copy()
+		} else if diff.Revision != nil {
+			diff.V2FileContractElement.V2FileContract = *diff.Revision
+			f.v2fces[id] = diff.V2FileContractElement.Copy()
+		} else if diff.Resolution != nil {
+			delete(f.v2fces, id)
+		}
+	}
 
 	for id, sce := range f.sces {
 		au.UpdateElementProof(&sce.StateElement)
@@ -113,6 +129,10 @@ func (f *fuzzer) processApplyUpdate(au consensus.ApplyUpdate) {
 	for id, fce := range f.fces {
 		au.UpdateElementProof(&fce.StateElement)
 		f.fces[id] = fce.Copy()
+	}
+	for id, fce := range f.v2fces {
+		au.UpdateElementProof(&fce.StateElement)
+		f.v2fces[id] = fce.Copy()
 	}
 }
 
@@ -155,6 +175,16 @@ func (f *fuzzer) processRevertUpdate(ru consensus.RevertUpdate) {
 			f.fces[id] = diff.FileContractElement.Copy()
 		}
 	}
+	for _, diff := range ru.V2FileContractElementDiffs() {
+		id := diff.V2FileContractElement.ID
+		if diff.Created {
+			delete(f.v2fces, id)
+		} else if diff.Revision != nil {
+			f.v2fces[id] = diff.V2FileContractElement.Copy()
+		} else if diff.Resolution != nil {
+			f.v2fces[id] = diff.V2FileContractElement.Copy()
+		}
+	}
 
 	for id, sce := range f.sces {
 		ru.UpdateElementProof(&sce.StateElement)
@@ -167,6 +197,10 @@ func (f *fuzzer) processRevertUpdate(ru consensus.RevertUpdate) {
 	for id, fce := range f.fces {
 		ru.UpdateElementProof(&fce.StateElement)
 		f.fces[id] = fce.Copy()
+	}
+	for id, fce := range f.v2fces {
+		ru.UpdateElementProof(&fce.StateElement)
+		f.v2fces[id] = fce.Copy()
 	}
 }
 
@@ -209,7 +243,7 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	}
 	var amount types.Currency
 	{
-		for i := 0; i < f.rng.Intn(3); i++ {
+		for i, count := 0, f.rng.Intn(3); i < count; i++ {
 			fc := prepareContract(f.addr, f.n.tip().Height+10)
 			txn.FileContracts = append(txn.FileContracts, fc)
 			amount = amount.Add(fc.Payout)
@@ -229,8 +263,8 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 				continue
 			}
 			fc.RevisionNumber++
-			fc.WindowStart = height + 10
-			fc.WindowEnd = fc.WindowStart + 10
+			// fc.WindowStart = height + 1
+			// fc.WindowEnd = fc.WindowStart + 10
 			txn.FileContractRevisions = append(txn.FileContractRevisions, types.FileContractRevision{
 				ParentID:         fce.ID,
 				UnlockConditions: f.uc,
@@ -246,7 +280,7 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 		}
 	}
 	{
-		for i := 0; i < f.rng.Intn(3); i++ {
+		for i, count := 0, f.rng.Intn(3); i < count; i++ {
 			sco := types.SiacoinOutput{
 				Address: f.addr,
 				Value:   types.NewCurrency64(1),
@@ -279,7 +313,7 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	}
 	{
 		var amount uint64
-		for i := 0; i < f.rng.Intn(3); i++ {
+		for i, count := 0, f.rng.Intn(3); i < count; i++ {
 			sfo := types.SiafundOutput{
 				Address: f.addr,
 				Value:   1,
@@ -345,10 +379,68 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	return
 }
 
-func (f *fuzzer) generateV2Transaction() (txn types.V2Transaction) {
+func prepareV2Contract(renterPK, hostPK types.PrivateKey, proofHeight uint64) (types.V2FileContract, types.Currency) {
+	fc, _ := proto4.NewContract(proto4.HostPrices{}, proto4.RPCFormContractParams{
+		ProofHeight:     proofHeight,
+		Allowance:       types.Siacoins(1),
+		RenterAddress:   types.StandardUnlockConditions(renterPK.PublicKey()).UnlockHash(),
+		Collateral:      types.Siacoins(1),
+		RenterPublicKey: renterPK.PublicKey(),
+	}, hostPK.PublicKey(), types.StandardUnlockConditions(hostPK.PublicKey()).UnlockHash())
+	fc.ExpirationHeight = fc.ProofHeight + 1
+
+	payout := fc.RenterOutput.Value.Add(fc.HostOutput.Value).Add(consensus.State{}.V2FileContractTax(fc))
+	return fc, payout
+}
+
+func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]types.V2FileContractElement) (txn types.V2Transaction) {
+	var amount types.Currency
 	{
-		var amount types.Currency
-		for i := 0; i < f.rng.Intn(3); i++ {
+		for i, count := 0, f.rng.Intn(3); i < count; i++ {
+			fc, payout := prepareV2Contract(f.pk, f.pk, f.n.tip().Height+10)
+
+			amount = amount.Add(payout)
+			txn.FileContracts = append(txn.FileContracts, fc)
+		}
+	}
+	{
+		i := 0
+		count := f.rng.Intn(3)
+		for id, fce := range f.v2fces {
+			if i > count {
+				break
+			}
+
+			fc := fce.V2FileContract
+			height := f.n.tip().Height
+			if height >= fc.ProofHeight {
+				continue
+			}
+			fc.RevisionNumber++
+
+			parent := fce
+			if v, ok := originalParents[id]; ok {
+				parent = v
+			} else {
+				originalParents[id] = parent
+			}
+
+			txn.FileContractRevisions = append(txn.FileContractRevisions, types.V2FileContractRevision{
+				Parent:   parent,
+				Revision: fc,
+			})
+
+			f.v2fces[id] = types.V2FileContractElement{
+				ID:             id,
+				StateElement:   fce.StateElement,
+				V2FileContract: fc,
+			}
+
+			i++
+		}
+	}
+	{
+		for i, count := 0, f.rng.Intn(3); i < count; i++ {
 			sco := types.SiacoinOutput{
 				Address: f.addr,
 				Value:   types.NewCurrency64(1),
@@ -381,7 +473,7 @@ func (f *fuzzer) generateV2Transaction() (txn types.V2Transaction) {
 	}
 	{
 		var amount uint64
-		for i := 0; i < f.rng.Intn(3); i++ {
+		for i, count := 0, f.rng.Intn(3); i < count; i++ {
 			sfo := types.SiafundOutput{
 				Address: f.addr,
 				Value:   1,
@@ -432,9 +524,11 @@ func (f *fuzzer) mineBlock() {
 	for i := 0; i < f.rng.Intn(10); i++ {
 		txns = append(txns, f.generateTransaction())
 	}
+
 	var v2Txns []types.V2Transaction
+	originalParents := make(map[types.FileContractID]types.V2FileContractElement)
 	for i := 0; i < f.rng.Intn(10); i++ {
-		v2Txns = append(v2Txns, f.generateV2Transaction())
+		v2Txns = append(v2Txns, f.generateV2Transaction(originalParents))
 	}
 
 	b := mineBlock(f.n.tipState(), txns, v2Txns, types.VoidAddress)
@@ -459,7 +553,7 @@ func main() {
 		log.Println("Mining:", i)
 		f.mineBlock()
 
-		if rng.Float64() < 0.2 {
+		if f.prob(0.2) {
 			log.Println("Reverting:", i)
 			f.revertBlock()
 		}
