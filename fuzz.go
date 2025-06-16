@@ -145,7 +145,7 @@ func (f *fuzzer) processApplyUpdate(au consensus.ApplyUpdate) {
 			delete(f.v2fces, id)
 		}
 	}
-	f.cies = append(f.cies, au.ChainIndexElement())
+	f.cies = append(f.cies, au.ChainIndexElement().Copy())
 
 	for id, sce := range f.sces {
 		au.UpdateElementProof(&sce.StateElement)
@@ -165,7 +165,7 @@ func (f *fuzzer) processApplyUpdate(au consensus.ApplyUpdate) {
 	}
 	for i, cie := range f.cies {
 		au.UpdateElementProof(&cie.StateElement)
-		f.cies[i] = cie
+		f.cies[i] = cie.Copy()
 	}
 }
 
@@ -238,6 +238,6 @@ func (f *fuzzer) processRevertUpdate(ru consensus.RevertUpdate) {
 	}
 	for i, cie := range f.cies {
 		ru.UpdateElementProof(&cie.StateElement)
-		f.cies[i] = cie
+		f.cies[i] = cie.Copy()
 	}
 }
