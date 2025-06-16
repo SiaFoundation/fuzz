@@ -64,10 +64,10 @@ func fuzzCommand() {
 
 	for i := 0; i < 1000; i++ {
 		{
-			log.Println("Mining:", f.n.tip().Height)
-			log.Printf("Current state: %v", stateHash(f.n.states[len(f.n.states)-1]))
-
 			b := f.mineBlock()
+			log.Println("Mining:", f.n.tip().Height)
+			log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(f.n.states[len(f.n.states)-1]))
+
 			s.Blocks = append(s.Blocks, block{
 				Block:    b,
 				Reverted: false,
@@ -151,7 +151,7 @@ func reproCommand(path string) {
 
 	for i, b := range s.Blocks {
 		log.Println("Applying:", i)
-		log.Printf("Current state: %v", stateHash(states[len(states)-1]))
+		log.Printf("Block ID: %v, current state: %v", b.Block.ID(), stateHash(states[len(states)-1]))
 
 		// apply block first
 		apply(b.Block)
