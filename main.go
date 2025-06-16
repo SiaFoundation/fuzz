@@ -653,8 +653,10 @@ func (f *fuzzer) revertBlock() {
 
 func (f *fuzzer) mineBlock() {
 	var txns []types.Transaction
-	for i := 0; i < f.rng.Intn(20); i++ {
-		txns = append(txns, f.generateTransaction())
+	if f.n.tip().Height < (f.n.network.HardforkV2.RequireHeight - 1) {
+		for i := 0; i < f.rng.Intn(20); i++ {
+			txns = append(txns, f.generateTransaction())
+		}
 	}
 
 	var v2Txns []types.V2Transaction
@@ -677,7 +679,7 @@ func main() {
 	pk := types.NewPrivateKeyFromSeed(seed)
 	f := newFuzzer(rng, pk)
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10000; i++ {
 		if f.n.tip().Height > 0 && f.prob(0.3) {
 			log.Println("Reverting:", i)
 
