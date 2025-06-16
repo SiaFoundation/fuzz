@@ -29,8 +29,8 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey) *fuzzer {
 	addr := uc.UnlockHash()
 
 	n := newTestChain(false, func(network *consensus.Network, genesisBlock types.Block) {
-		network.HardforkV2.AllowHeight = 100
-		network.HardforkV2.RequireHeight = 500
+		network.HardforkV2.AllowHeight = 1
+		network.HardforkV2.RequireHeight = 2
 		genesisBlock.Transactions[0].SiacoinOutputs[0].Address = addr
 		genesisBlock.Transactions[0].SiafundOutputs[0].Address = addr
 	})

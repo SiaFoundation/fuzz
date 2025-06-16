@@ -18,15 +18,14 @@ func main() {
 
 	for i := 0; i < 10000; i++ {
 		if f.n.tip().Height > 1 && f.prob(0.3) {
-			log.Println("Reverting:", i)
+			log.Println("Reverting:", f.n.tip().Height)
 
 			b := f.n.tipBlock()
 			f.revertBlock()
 			f.applyBlock(b)
 			f.revertBlock()
-
 		} else {
-			log.Println("Mining:", i)
+			log.Println("Mining:", f.n.tip().Height)
 			f.mineBlock()
 		}
 	}
