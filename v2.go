@@ -29,7 +29,7 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 	var amount types.Currency
 	{
 		for i, count := 0, f.rng.Intn(3); i < count; i++ {
-			fc, payout := prepareV2Contract(f.pk, f.pk, f.n.tip().Height+10)
+			fc, payout := prepareV2Contract(f.pk, f.pk, f.n.tip().Height+1)
 
 			amount = amount.Add(payout)
 			txn.FileContracts = append(txn.FileContracts, fc)
