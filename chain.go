@@ -1,8 +1,8 @@
 package main
 
 import (
+	"log"
 	"math"
-	"time"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
@@ -105,9 +105,12 @@ func (n *testChain) applyBlock(b types.Block) consensus.ApplyUpdate {
 		if err := consensus.ValidateBlock(cs, b, bs); err != nil {
 			panic(err)
 		}
+		if b.V2 != nil {
+			log.Printf("Parent state: %v, got commitment hash: %v", cs.Index, b.V2.Commitment)
+		}
 	}
 
-	cs, au := consensus.ApplyBlock(cs, b, bs, time.Time{})
+	cs, au := consensus.ApplyBlock(cs, b, bs, b.Timestamp)
 
 	n.store.AddState(cs)
 	n.store.AddBlock(b, &bs)

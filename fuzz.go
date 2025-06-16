@@ -72,7 +72,7 @@ func (f *fuzzer) revertBlock() {
 	f.processRevertUpdate(ru)
 }
 
-func (f *fuzzer) mineBlock() {
+func (f *fuzzer) mineBlock() types.Block {
 	var txns []types.Transaction
 	if f.n.tip().Height < (f.n.network.HardforkV2.RequireHeight - 1) {
 		for i := 0; i < f.rng.Intn(20); i++ {
@@ -91,8 +91,7 @@ func (f *fuzzer) mineBlock() {
 		}
 	}
 
-	b := mineBlock(f.n.tipState(), txns, v2Txns, types.VoidAddress)
-	f.applyBlock(b)
+	return mineBlock(f.n.tipState(), txns, v2Txns, types.VoidAddress)
 }
 
 func (f *fuzzer) processApplyUpdate(au consensus.ApplyUpdate) {
