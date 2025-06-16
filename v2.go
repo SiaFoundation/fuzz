@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"sort"
+
 	"go.sia.tech/core/consensus"
 	proto4 "go.sia.tech/core/rhp/v4"
 	"go.sia.tech/core/types"
@@ -25,6 +28,27 @@ func prepareV2Contract(renterPK, hostPK types.PrivateKey, proofHeight uint64) (t
 	return fc, payoutV2(fc)
 }
 
+type hash256Like interface {
+	~[32]byte
+}
+
+func mapValues[K hash256Like, V any](m map[K]V) []V {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		return bytes.Compare(keys[i][:], keys[j][:]) < 0
+	})
+
+	values := make([]V, 0, len(m))
+	for _, k := range keys {
+		values = append(values, m[k])
+	}
+	return values
+}
+
 func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]types.V2FileContractElement) (txn types.V2Transaction) {
 	var amount types.Currency
 	{
@@ -35,50 +59,52 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 			txn.FileContracts = append(txn.FileContracts, fc)
 		}
 	}
-	// {
-	// 	i := 0
-	// 	count := f.rng.Intn(3)
-	// 	for id, fce := range f.v2fces {
-	// 		if i > count {
-	// 			break
-	// 		}
-
-	// 		fc := fce.V2FileContract
-	// 		height := f.n.tip().Height
-	// 		if height >= fc.ProofHeight {
-	// 			continue
-	// 		}
-	// 		fc.RevisionNumber++
-
-	// 		parent := fce
-	// 		if v, ok := originalParents[id]; ok {
-	// 			parent = v
-	// 		} else {
-	// 			originalParents[id] = parent
-	// 		}
-
-	// 		txn.FileContractRevisions = append(txn.FileContractRevisions, types.V2FileContractRevision{
-	// 			Parent:   parent,
-	// 			Revision: fc,
-	// 		})
-
-	// 		f.v2fces[id] = types.V2FileContractElement{
-	// 			ID:             id,
-	// 			StateElement:   fce.StateElement,
-	// 			V2FileContract: fc,
-	// 		}
-
-	// 		i++
-	// 	}
-	// }
 	{
 		i := 0
 		count := f.rng.Intn(3)
-		for id, fce := range f.v2fces {
+		for _, fce := range mapValues(f.v2fces) {
 			if i > count {
 				break
 			}
 
+			id := fce.ID
+			fc := fce.V2FileContract
+			height := f.n.tip().Height
+			if height >= fc.ProofHeight {
+				continue
+			}
+			fc.RevisionNumber++
+
+			parent := fce
+			if v, ok := originalParents[id]; ok {
+				parent = v
+			} else {
+				originalParents[id] = parent
+			}
+
+			txn.FileContractRevisions = append(txn.FileContractRevisions, types.V2FileContractRevision{
+				Parent:   parent,
+				Revision: fc,
+			})
+
+			f.v2fces[id] = types.V2FileContractElement{
+				ID:             id,
+				StateElement:   fce.StateElement,
+				V2FileContract: fc,
+			}
+
+			i++
+		}
+	}
+	{
+		i := 0
+		count := f.rng.Intn(3)
+		for _, fce := range mapValues(f.v2fces) {
+			if i > count {
+				break
+			}
+
+			id := fce.ID
 			fc := fce.V2FileContract
 			height := f.n.tip().Height
 			if height < fc.ProofHeight {
@@ -104,98 +130,100 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 			i++
 		}
 	}
-	// {
-	// 	i := 0
-	// 	count := f.rng.Intn(3)
-	// 	for id, fce := range f.v2fces {
-	// 		if i > count {
-	// 			break
-	// 		}
-
-	// 		fc := fce.V2FileContract
-	// 		height := f.n.tip().Height
-	// 		if height < fc.ProofHeight {
-	// 			continue
-	// 		}
-	// 		fc.RevisionNumber++
-
-	// 		parent := fce
-	// 		if v, ok := originalParents[id]; ok {
-	// 			parent = v
-	// 		} else {
-	// 			originalParents[id] = parent
-	// 		}
-
-	// 		newContract := fc
-	// 		newContract.ProofHeight = height + 10
-	// 		newContract.ExpirationHeight = newContract.ProofHeight + 1
-	// 		renewal := &types.V2FileContractRenewal{
-	// 			FinalRenterOutput: fc.RenterOutput,
-	// 			FinalHostOutput:   fc.HostOutput,
-	// 			RenterRollover:    types.ZeroCurrency,
-	// 			HostRollover:      types.ZeroCurrency,
-	// 			NewContract:       newContract,
-	// 		}
-	// 		txn.FileContractResolutions = append(txn.FileContractResolutions, types.V2FileContractResolution{
-	// 			Parent:     parent,
-	// 			Resolution: renewal,
-	// 		})
-	// 		amount = amount.Add(payoutV2(fc))
-	// 		delete(f.v2fces, id)
-
-	// 		i++
-	// 	}
-	// }
-	// {
-	// 	i := 0
-	// 	count := f.rng.Intn(3)
-	// 	for id, fce := range f.v2fces {
-	// 		if i > count {
-	// 			break
-	// 		}
-
-	// 		fc := fce.V2FileContract
-	// 		height := f.n.tip().Height
-	// 		if height < fc.ExpirationHeight {
-	// 			continue
-	// 		}
-	// 		fc.RevisionNumber++
-
-	// 		parent := fce.Copy()
-	// 		if v, ok := originalParents[id]; ok {
-	// 			parent = v
-	// 		} else {
-	// 			originalParents[id] = parent
-	// 		}
-
-	// 		txn.FileContractResolutions = append(txn.FileContractResolutions, types.V2FileContractResolution{
-	// 			Parent:     parent,
-	// 			Resolution: &types.V2FileContractExpiration{},
-	// 		})
-	// 		delete(f.v2fces, id)
-
-	// 		i++
-	// 	}
-	// }
 	{
-		// for i, count := 0, f.rng.Intn(3); i < count; i++ {
-		// 	sco := types.SiacoinOutput{
-		// 		Address: f.addr,
-		// 		Value:   types.NewCurrency64(1),
-		// 	}
+		i := 0
+		count := f.rng.Intn(3)
+		for _, fce := range mapValues(f.v2fces) {
+			if i > count {
+				break
+			}
 
-		// 	amount = amount.Add(sco.Value)
-		// 	txn.SiacoinOutputs = append(txn.SiacoinOutputs, sco)
-		// }
+			id := fce.ID
+			fc := fce.V2FileContract
+			height := f.n.tip().Height
+			if height < fc.ProofHeight {
+				continue
+			}
+			fc.RevisionNumber++
+
+			parent := fce
+			if v, ok := originalParents[id]; ok {
+				parent = v
+			} else {
+				originalParents[id] = parent
+			}
+
+			newContract := fc
+			newContract.ProofHeight = height + 10
+			newContract.ExpirationHeight = newContract.ProofHeight + 1
+			renewal := &types.V2FileContractRenewal{
+				FinalRenterOutput: fc.RenterOutput,
+				FinalHostOutput:   fc.HostOutput,
+				RenterRollover:    types.ZeroCurrency,
+				HostRollover:      types.ZeroCurrency,
+				NewContract:       newContract,
+			}
+			txn.FileContractResolutions = append(txn.FileContractResolutions, types.V2FileContractResolution{
+				Parent:     parent,
+				Resolution: renewal,
+			})
+			amount = amount.Add(payoutV2(fc))
+			delete(f.v2fces, id)
+
+			i++
+		}
+	}
+	{
+		i := 0
+		count := f.rng.Intn(3)
+		for _, fce := range mapValues(f.v2fces) {
+			if i > count {
+				break
+			}
+
+			id := fce.ID
+			fc := fce.V2FileContract
+			height := f.n.tip().Height
+			if height < fc.ExpirationHeight {
+				continue
+			}
+			fc.RevisionNumber++
+
+			parent := fce.Copy()
+			if v, ok := originalParents[id]; ok {
+				parent = v
+			} else {
+				originalParents[id] = parent
+			}
+
+			txn.FileContractResolutions = append(txn.FileContractResolutions, types.V2FileContractResolution{
+				Parent:     parent,
+				Resolution: &types.V2FileContractExpiration{},
+			})
+			delete(f.v2fces, id)
+
+			i++
+		}
+	}
+	{
+		for i, count := 0, f.rng.Intn(3); i < count; i++ {
+			sco := types.SiacoinOutput{
+				Address: f.addr,
+				Value:   types.NewCurrency64(1),
+			}
+
+			amount = amount.Add(sco.Value)
+			txn.SiacoinOutputs = append(txn.SiacoinOutputs, sco)
+		}
 		if amount.Cmp(types.ZeroCurrency) == 1 {
 			var sum types.Currency
-			for id, sce := range f.sces {
+			for _, sce := range mapValues(f.sces) {
 				sum = sum.Add(sce.SiacoinOutput.Value)
 				txn.SiacoinInputs = append(txn.SiacoinInputs, types.V2SiacoinInput{
 					Parent:          sce,
 					SatisfiedPolicy: types.SatisfiedPolicy{Policy: f.policy},
 				})
-				delete(f.sces, id)
+				delete(f.sces, sce.ID)
 
 				if sum.Cmp(amount) >= 0 {
 					break
@@ -209,39 +237,39 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 			}
 		}
 	}
-	// {
-	// 	var amount uint64
-	// 	for i, count := 0, f.rng.Intn(3); i < count; i++ {
-	// 		sfo := types.SiafundOutput{
-	// 			Address: f.addr,
-	// 			Value:   1,
-	// 		}
+	{
+		var amount uint64
+		for i, count := 0, f.rng.Intn(3); i < count; i++ {
+			sfo := types.SiafundOutput{
+				Address: f.addr,
+				Value:   1,
+			}
 
-	// 		amount += sfo.Value
-	// 		txn.SiafundOutputs = append(txn.SiafundOutputs, sfo)
-	// 	}
-	// 	if amount > 0 {
-	// 		var sum uint64
-	// 		for id, sfe := range f.sfes {
-	// 			sum += sfe.SiafundOutput.Value
-	// 			txn.SiafundInputs = append(txn.SiafundInputs, types.V2SiafundInput{
-	// 				Parent:          sfe,
-	// 				SatisfiedPolicy: types.SatisfiedPolicy{Policy: f.policy},
-	// 			})
-	// 			delete(f.sfes, id)
+			amount += sfo.Value
+			txn.SiafundOutputs = append(txn.SiafundOutputs, sfo)
+		}
+		if amount > 0 {
+			var sum uint64
+			for _, sfe := range mapValues(f.sfes) {
+				sum += sfe.SiafundOutput.Value
+				txn.SiafundInputs = append(txn.SiafundInputs, types.V2SiafundInput{
+					Parent:          sfe,
+					SatisfiedPolicy: types.SatisfiedPolicy{Policy: f.policy},
+				})
+				delete(f.sfes, sfe.ID)
 
-	// 			if sum >= amount {
-	// 				break
-	// 			}
-	// 		}
-	// 		if sum > amount {
-	// 			txn.SiafundOutputs = append(txn.SiafundOutputs, types.SiafundOutput{
-	// 				Address: f.addr,
-	// 				Value:   sum - amount,
-	// 			})
-	// 		}
-	// 	}
-	// }
+				if sum >= amount {
+					break
+				}
+			}
+			if sum > amount {
+				txn.SiafundOutputs = append(txn.SiafundOutputs, types.SiafundOutput{
+					Address: f.addr,
+					Value:   sum - amount,
+				})
+			}
+		}
+	}
 	// so we don't get "transactions cannot be empty"
 	txn.ArbitraryData = []byte("1234")
 	signV2TransactionWithContracts(f.n.tipState(), f.pk, &txn)

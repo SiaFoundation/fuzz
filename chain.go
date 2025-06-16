@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"math"
+	"time"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
@@ -23,7 +24,7 @@ func mineBlock(state consensus.State, txns []types.Transaction, v2Txns []types.V
 
 	b := types.Block{
 		ParentID:     state.Index.ID,
-		Timestamp:    types.CurrentTimestamp(),
+		Timestamp:    time.Date(2025, time.January, 0, 0, 0, 0, 0, time.UTC),
 		Transactions: txns,
 		MinerPayouts: []types.SiacoinOutput{{Address: minerAddr, Value: reward}},
 	}

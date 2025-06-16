@@ -22,20 +22,21 @@ func prepareContract(addr types.Address, endHeight uint64) types.FileContract {
 func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	// {
 	// 	count := f.rng.Intn(2)
-	// 	for _, fce := range f.fces {
+	// 	for _, fce := range mapValues(f.fces) {
 	// 		if len(txn.StorageProofs) >= count {
 	// 			break
 	// 		}
 
+	// 		id := fce.ID
 	// 		fc := fce.FileContract
 	// 		height := f.n.tip().Height
 	// 		if height < fc.WindowStart {
 	// 			continue
 	// 		}
 	// 		txn.StorageProofs = append(txn.StorageProofs, types.StorageProof{
-	// 			ParentID: fce.ID,
+	// 			ParentID: id,
 	// 		})
-	// 		delete(f.fces, fce.ID)
+	// 		delete(f.fces, id)
 	// 	}
 	// 	if len(txn.StorageProofs) > 0 {
 	// 		// can't have storage proofs and outputs in one transaction
@@ -53,7 +54,7 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	// {
 	// 	i := 0
 	// 	count := f.rng.Intn(3)
-	// 	for _, fce := range f.fces {
+	// 	for _, fce := range mapValues(f.fces) {
 	// 		if i > count {
 	// 			break
 	// 		}
@@ -92,7 +93,8 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	// 	}
 	// 	if amount.Cmp(types.ZeroCurrency) == 1 {
 	// 		var sum types.Currency
-	// 		for id, sce := range f.sces {
+	// 		for _, sce := range mapValues(f.sces) {
+	// 			id := sce.ID
 	// 			sum = sum.Add(sce.SiacoinOutput.Value)
 	// 			txn.SiacoinInputs = append(txn.SiacoinInputs, types.SiacoinInput{
 	// 				ParentID:         id,
@@ -125,7 +127,8 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	// 	}
 	// 	if amount > 0 {
 	// 		var sum uint64
-	// 		for id, sfe := range f.sfes {
+	// 		for _, sfe := range mapValues(f.sfes) {
+	// 			id := sfe.ID
 	// 			sum += sfe.SiafundOutput.Value
 	// 			txn.SiafundInputs = append(txn.SiafundInputs, types.SiafundInput{
 	// 				ParentID:         id,
