@@ -29,8 +29,12 @@ func mineBlock(state consensus.State, txns []types.Transaction, v2Txns []types.V
 		MinerPayouts: []types.SiacoinOutput{{Address: minerAddr, Value: reward}},
 	}
 	if len(v2Txns) > 0 {
+		var copy []types.V2Transaction
+		for _, txn := range v2Txns {
+			copy = append(copy, txn.DeepCopy())
+		}
 		b.V2 = &types.V2BlockData{
-			Transactions: v2Txns,
+			Transactions: copy,
 			Height:       state.Index.Height + 1,
 		}
 		b.V2.Commitment = state.Commitment(b.MinerPayouts[0].Address, b.Transactions, b.V2Transactions())
