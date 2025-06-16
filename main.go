@@ -35,7 +35,7 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey) *fuzzer {
 
 	n := newTestChain(false, func(network *consensus.Network, genesisBlock types.Block) {
 		network.HardforkV2.AllowHeight = 100
-		network.HardforkV2.RequireHeight = 10000
+		network.HardforkV2.RequireHeight = 500
 		genesisBlock.Transactions[0].SiacoinOutputs[0].Address = addr
 		genesisBlock.Transactions[0].SiafundOutputs[0].Address = addr
 	})
@@ -545,7 +545,7 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 			}
 			fc.RevisionNumber++
 
-			parent := fce
+			parent := fce.Copy()
 			if v, ok := originalParents[id]; ok {
 				parent = v
 			} else {
@@ -641,6 +641,16 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 	return
 }
 
+func (f *fuzzer) applyBlock(b types.Block) {
+	au := f.n.applyBlock(b)
+	f.processApplyUpdate(au)
+}
+
+func (f *fuzzer) revertBlock() {
+	ru := f.n.revertBlock()
+	f.processRevertUpdate(ru)
+}
+
 func (f *fuzzer) mineBlock() {
 	var txns []types.Transaction
 	for i := 0; i < f.rng.Intn(20); i++ {
@@ -656,13 +666,7 @@ func (f *fuzzer) mineBlock() {
 	}
 
 	b := mineBlock(f.n.tipState(), txns, v2Txns, types.VoidAddress)
-	au := f.n.applyBlock(b)
-	f.processApplyUpdate(au)
-}
-
-func (f *fuzzer) revertBlock() {
-	ru := f.n.revertBlock()
-	f.processRevertUpdate(ru)
+	f.applyBlock(b)
 }
 
 func main() {
@@ -673,10 +677,15 @@ func main() {
 	pk := types.NewPrivateKeyFromSeed(seed)
 	f := newFuzzer(rng, pk)
 
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 1000; i++ {
 		if f.n.tip().Height > 0 && f.prob(0.3) {
 			log.Println("Reverting:", i)
+
+			b := f.n.tipBlock()
 			f.revertBlock()
+			f.applyBlock(b)
+			f.revertBlock()
+
 		} else {
 			log.Println("Mining:", i)
 			f.mineBlock()
