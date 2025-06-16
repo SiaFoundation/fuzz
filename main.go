@@ -390,6 +390,10 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	return
 }
 
+func payoutV2(fc types.V2FileContract) types.Currency {
+	return fc.RenterOutput.Value.Add(fc.HostOutput.Value).Add(consensus.State{}.V2FileContractTax(fc))
+}
+
 func prepareV2Contract(renterPK, hostPK types.PrivateKey, proofHeight uint64) (types.V2FileContract, types.Currency) {
 	fc, _ := proto4.NewContract(proto4.HostPrices{}, proto4.RPCFormContractParams{
 		ProofHeight:     proofHeight,
@@ -402,8 +406,7 @@ func prepareV2Contract(renterPK, hostPK types.PrivateKey, proofHeight uint64) (t
 	fc.RenterOutput.Address = types.VoidAddress
 	fc.HostOutput.Address = types.VoidAddress
 
-	payout := fc.RenterOutput.Value.Add(fc.HostOutput.Value).Add(consensus.State{}.V2FileContractTax(fc))
-	return fc, payout
+	return fc, payoutV2(fc)
 }
 
 func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]types.V2FileContractElement) (txn types.V2Transaction) {
@@ -507,12 +510,21 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 				originalParents[id] = parent
 			}
 
+			newContract := fc
+			newContract.ProofHeight = height + 10
+			newContract.ExpirationHeight = newContract.ProofHeight + 1
+			renewal := &types.V2FileContractRenewal{
+				FinalRenterOutput: fc.RenterOutput,
+				FinalHostOutput:   fc.HostOutput,
+				RenterRollover:    types.ZeroCurrency,
+				HostRollover:      types.ZeroCurrency,
+				NewContract:       newContract,
+			}
 			txn.FileContractResolutions = append(txn.FileContractResolutions, types.V2FileContractResolution{
-				Parent: parent,
-				Resolution: &types.V2StorageProof{
-					ProofIndex: f.cies[fc.ProofHeight],
-				},
+				Parent:     parent,
+				Resolution: renewal,
 			})
+			amount = amount.Add(payoutV2(fc))
 			delete(f.v2fces, id)
 
 			i++
@@ -662,7 +674,7 @@ func main() {
 	f := newFuzzer(rng, pk)
 
 	for i := 0; i < 500; i++ {
-		if f.n.tip().Height > 0 && f.prob(0.2) {
+		if f.n.tip().Height > 0 && f.prob(0.3) {
 			log.Println("Reverting:", i)
 			f.revertBlock()
 		} else {
