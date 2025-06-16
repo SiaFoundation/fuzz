@@ -17,7 +17,7 @@ func main() {
 	f := newFuzzer(rng, pk)
 
 	for i := 0; i < 10000; i++ {
-		if f.n.tip().Height > 0 && f.prob(0.3) {
+		if f.n.tip().Height > 1 && f.prob(0.3) {
 			log.Println("Reverting:", i)
 
 			b := f.n.tipBlock()
