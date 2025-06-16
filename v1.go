@@ -45,7 +45,7 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	}
 	var amount types.Currency
 	{
-		for i, count := 0, f.rng.Intn(3); i < count; i++ {
+		for i, count := 0, f.rng.Intn(10); i < count; i++ {
 			fc := prepareContract(f.addr, f.n.tip().Height+10)
 			txn.FileContracts = append(txn.FileContracts, fc)
 			amount = amount.Add(fc.Payout)

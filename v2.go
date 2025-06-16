@@ -52,7 +52,7 @@ func mapValues[K hash256Like, V any](m map[K]V) []V {
 func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]types.V2FileContractElement) (txn types.V2Transaction) {
 	var amount types.Currency
 	{
-		for i, count := 0, f.rng.Intn(3); i < count; i++ {
+		for i, count := 0, f.rng.Intn(10); i < count; i++ {
 			fc, payout := prepareV2Contract(f.pk, f.pk, f.n.tip().Height+1)
 
 			amount = amount.Add(payout)
@@ -75,9 +75,9 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 			}
 			fc.RevisionNumber++
 
-			parent := fce
+			parent := fce.Copy()
 			if v, ok := originalParents[id]; ok {
-				parent = v
+				parent = v.Copy()
 			} else {
 				originalParents[id] = parent
 			}
@@ -112,9 +112,9 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 			}
 			fc.RevisionNumber++
 
-			parent := fce
+			parent := fce.Copy()
 			if v, ok := originalParents[id]; ok {
-				parent = v
+				parent = v.Copy()
 			} else {
 				originalParents[id] = parent
 			}
@@ -122,7 +122,7 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 			txn.FileContractResolutions = append(txn.FileContractResolutions, types.V2FileContractResolution{
 				Parent: parent,
 				Resolution: &types.V2StorageProof{
-					ProofIndex: f.cies[fc.ProofHeight],
+					ProofIndex: f.cies[fc.ProofHeight].Copy(),
 				},
 			})
 			delete(f.v2fces, id)
@@ -146,9 +146,9 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 			}
 			fc.RevisionNumber++
 
-			parent := fce
+			parent := fce.Copy()
 			if v, ok := originalParents[id]; ok {
-				parent = v
+				parent = v.Copy()
 			} else {
 				originalParents[id] = parent
 			}
@@ -191,7 +191,7 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 
 			parent := fce.Copy()
 			if v, ok := originalParents[id]; ok {
-				parent = v
+				parent = v.Copy()
 			} else {
 				originalParents[id] = parent
 			}
