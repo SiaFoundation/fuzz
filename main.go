@@ -8,23 +8,21 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"reflect"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
 	"go.sia.tech/coreutils/chain"
 	"lukechampine.com/flagg"
 )
 
-type block struct {
-	Block    types.Block
-	Reverted bool
-}
-
 type state struct {
 	Genesis types.Block
 	Network *consensus.Network
 
-	Blocks []block
+	Blocks []types.Block
 }
 
 func stateHash(cs consensus.State) types.Hash256 {
@@ -62,25 +60,45 @@ func fuzzCommand() {
 		}
 	}()
 
+	options := cmp.Options([]cmp.Option{
+		cmpopts.EquateEmpty(),
+		cmp.AllowUnexported(consensus.Work{}),
+		cmp.Comparer(func(x, y types.StateElement) bool {
+			return x.LeafIndex == y.LeafIndex && reflect.DeepEqual(x.MerkleProof, y.MerkleProof)
+		}),
+	})
 	for i := 0; i < 10000; i++ {
 		{
 			b := f.mineBlock()
 			log.Println("Mining:", f.n.tip().Height)
 			log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(f.n.states[len(f.n.states)-1]))
 
-			s.Blocks = append(s.Blocks, block{
-				Block:    b,
-				Reverted: false,
-			})
+			s.Blocks = append(s.Blocks, b)
+
+			bs1 := f.n.store.SupplementTipBlock(types.Block{})
+			f.applyBlock(b)
+			f.revertBlock()
+			bs2 := f.n.store.SupplementTipBlock(types.Block{})
 			f.applyBlock(b)
 
-			if f.n.tip().Height > 1 && f.prob(0.3) {
-				log.Println("Reverting:", f.n.tip().Height)
+			// sort.Slice(bs1.ExpiringFileContracts, func(i, j int) bool {
+			// 	return bytes.Compare(bs1.ExpiringFileContracts[i].ID[:], bs1.ExpiringFileContracts[j].ID[:]) < 0
+			// })
+			// sort.Slice(bs2.ExpiringFileContracts, func(i, j int) bool {
+			// 	return bytes.Compare(bs2.ExpiringFileContracts[i].ID[:], bs2.ExpiringFileContracts[j].ID[:]) < 0
+			// })
 
-				s.Blocks[len(s.Blocks)-1].Reverted = true
-				f.revertBlock()
-				f.applyBlock(b)
-				f.revertBlock()
+			if !cmp.Equal(bs1, bs2, options) {
+				file, err := os.Create("bs.json")
+				if err != nil {
+					panic(err)
+				}
+				defer file.Close()
+
+				if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2}); err != nil {
+					panic(err)
+				}
+				panic("mismatched block supplement")
 			}
 		}
 	}
@@ -151,16 +169,11 @@ func reproCommand(path string) {
 
 	for i, b := range s.Blocks {
 		log.Println("Applying:", i)
-		log.Printf("Block ID: %v, current state: %v", b.Block.ID(), stateHash(states[len(states)-1]))
+		log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(states[len(states)-1]))
 
-		// apply block first
-		apply(b.Block)
-		if b.Reverted {
-			log.Println("Reverting:", i)
-			revert()
-			apply(b.Block)
-			revert()
-		}
+		apply(b)
+		revert()
+		apply(b)
 	}
 }
 

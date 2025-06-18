@@ -76,31 +76,20 @@ func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) 
 	}
 	defer f.Close()
 
-	db, err := coreutils.OpenBoltChainDB(f.Name())
-	if err != nil {
-		panic(err)
-	}
-	store, genesisState, err := chain.NewDBStore(db, network, genesisBlock, nil)
+	store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), network, genesisBlock, nil)
 	if err != nil {
 		panic(err)
 	}
 	bs := consensus.V1BlockSupplement{Transactions: make([]consensus.V1TransactionSupplement, len(genesisBlock.Transactions))}
 
 	return &testChain{
-		tempPath: f.Name(),
-		db:       db,
-		store:    store,
+		store: store,
 
 		network:     network,
 		blocks:      []types.Block{genesisBlock},
 		supplements: []consensus.V1BlockSupplement{bs},
 		states:      []consensus.State{genesisState},
 	}
-}
-
-func (n *testChain) Close() {
-	n.db.Close()
-	os.Remove(n.tempPath)
 }
 
 func (n *testChain) genesis() types.Block {
