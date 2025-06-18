@@ -62,7 +62,7 @@ func fuzzCommand() {
 		}
 	}()
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10000; i++ {
 		{
 			b := f.mineBlock()
 			log.Println("Mining:", f.n.tip().Height)

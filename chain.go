@@ -3,10 +3,12 @@ package main
 import (
 	"log"
 	"math"
+	"os"
 	"time"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
+	"go.sia.tech/coreutils"
 	"go.sia.tech/coreutils/chain"
 	"go.sia.tech/coreutils/testutil"
 )
@@ -42,7 +44,9 @@ func mineBlock(state consensus.State, txns []types.Transaction, v2Txns []types.V
 }
 
 type testChain struct {
-	store *chain.DBStore
+	tempPath string
+	db       *coreutils.BoltChainDB
+	store    *chain.DBStore
 
 	network     *consensus.Network
 	blocks      []types.Block
@@ -59,27 +63,44 @@ func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) 
 		network, genesisBlock = testutil.Network()
 	}
 	if v2 {
-		network.HardforkV2.AllowHeight = 1
-		network.HardforkV2.RequireHeight = 2
+		network.HardforkV2.AllowHeight = 200
+		network.HardforkV2.RequireHeight = 1000
 	}
 	if modifyGenesis != nil {
 		modifyGenesis(network, genesisBlock)
 	}
 
-	store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), network, genesisBlock, nil)
+	f, err := os.CreateTemp("", "consensus")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	db, err := coreutils.OpenBoltChainDB(f.Name())
+	if err != nil {
+		panic(err)
+	}
+	store, genesisState, err := chain.NewDBStore(db, network, genesisBlock, nil)
 	if err != nil {
 		panic(err)
 	}
 	bs := consensus.V1BlockSupplement{Transactions: make([]consensus.V1TransactionSupplement, len(genesisBlock.Transactions))}
 
 	return &testChain{
-		store: store,
+		tempPath: f.Name(),
+		db:       db,
+		store:    store,
 
 		network:     network,
 		blocks:      []types.Block{genesisBlock},
 		supplements: []consensus.V1BlockSupplement{bs},
 		states:      []consensus.State{genesisState},
 	}
+}
+
+func (n *testChain) Close() {
+	n.db.Close()
+	os.Remove(n.tempPath)
 }
 
 func (n *testChain) genesis() types.Block {
