@@ -4,14 +4,13 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"math"
 	"math/rand"
 	"os"
 	"reflect"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
 	"go.sia.tech/coreutils/chain"
@@ -31,13 +30,16 @@ func stateHash(cs consensus.State) types.Hash256 {
 	return h.Sum()
 }
 
-func fuzzCommand() {
+func fuzzCommand() error {
 	rng := rand.New(rand.NewSource(1))
 
 	seed := make([]byte, ed25519.SeedSize)
 	rng.Read(seed)
 	pk := types.NewPrivateKeyFromSeed(seed)
-	f := newFuzzer(rng, pk)
+	f, err := newFuzzer(rng, pk)
+	if err != nil {
+		return err
+	}
 
 	s := state{
 		Genesis: f.n.tipBlock(),
@@ -60,14 +62,7 @@ func fuzzCommand() {
 		}
 	}()
 
-	options := cmp.Options([]cmp.Option{
-		cmpopts.EquateEmpty(),
-		cmp.AllowUnexported(consensus.Work{}),
-		cmp.Comparer(func(x, y types.StateElement) bool {
-			return x.LeafIndex == y.LeafIndex && reflect.DeepEqual(x.MerkleProof, y.MerkleProof)
-		}),
-	})
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 10_000; i++ {
 		{
 			b := f.mineBlock()
 			log.Println("Mining:", f.n.tip().Height)
@@ -76,64 +71,63 @@ func fuzzCommand() {
 			s.Blocks = append(s.Blocks, b)
 
 			bs1 := f.n.store.SupplementTipBlock(types.Block{})
-			f.applyBlock(b)
+			if err := f.applyBlock(b); err != nil {
+				return fmt.Errorf("failed to apply block: %w", err)
+			}
 			bs2 := f.n.store.SupplementTipBlock(types.Block{})
 			f.revertBlock()
 			bs3 := f.n.store.SupplementTipBlock(types.Block{})
-			f.applyBlock(b)
+			if err := f.applyBlock(b); err != nil {
+				return fmt.Errorf("failed to re-apply block: %w", err)
+			}
 			bs4 := f.n.store.SupplementTipBlock(types.Block{})
 
-			if !cmp.Equal(bs1, bs3, options) || !cmp.Equal(bs2, bs4, options) {
+			if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
 				file, err := os.Create("bs.json")
 				if err != nil {
-					panic(err)
+					return err
 				}
 				defer file.Close()
 
-				if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2}); err != nil {
-					panic(err)
+				if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
+					return err
 				}
-				panic("mismatched block supplement")
+				return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
 			}
 		}
 	}
+
+	return nil
 }
 
-func reproCommand(path string) {
+func reproCommand(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer f.Close()
 
 	var s state
 	if err := json.NewDecoder(f).Decode(&s); err != nil {
-		panic(err)
+		return err
 	}
 
 	store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), s.Network, s.Genesis, nil)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	blocks := []types.Block{s.Genesis}
 	supplements := []consensus.V1BlockSupplement{{Transactions: make([]consensus.V1TransactionSupplement, len(s.Genesis.Transactions))}}
 	states := []consensus.State{genesisState}
 
-	apply := func(b types.Block) {
+	apply := func(b types.Block) error {
 		cs := states[len(states)-1]
 		bs := store.SupplementTipBlock(b)
 		if cs.Index.Height != math.MaxUint64 {
 			// don't validate genesis block
-			if b.V2 != nil {
-				log.Printf("Parent state: %v (%v), got commitment hash: %v", cs.Index, stateHash(cs), b.V2.Commitment)
-				expected := cs.Commitment(b.MinerPayouts[0].Address, b.Transactions, b.V2Transactions())
-				if b.V2.Commitment != expected {
-					log.Fatalf("commitment hash mismatch: expected %v, got %v", expected, b.V2.Commitment)
-				}
-			}
 			if err := consensus.ValidateBlock(cs, b, bs); err != nil {
-				panic(err)
+				return err
 			}
 		}
 
@@ -146,6 +140,8 @@ func reproCommand(path string) {
 		blocks = append(blocks, b)
 		supplements = append(supplements, bs)
 		states = append(states, cs)
+
+		return nil
 	}
 
 	revert := func() {
@@ -162,38 +158,37 @@ func reproCommand(path string) {
 		states = states[:len(states)-1]
 	}
 
-	options := cmp.Options([]cmp.Option{
-		cmpopts.EquateEmpty(),
-		cmp.AllowUnexported(consensus.Work{}),
-		cmp.Comparer(func(x, y types.StateElement) bool {
-			return x.LeafIndex == y.LeafIndex && reflect.DeepEqual(x.MerkleProof, y.MerkleProof)
-		}),
-	})
 	for i, b := range s.Blocks {
 		log.Println("Applying:", i)
 		log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(states[len(states)-1]))
 
 		bs1 := store.SupplementTipBlock(types.Block{})
-		apply(b)
+		if err := apply(b); err != nil {
+			return fmt.Errorf("failed to apply block: %w", err)
+		}
 		bs2 := store.SupplementTipBlock(types.Block{})
 		revert()
 		bs3 := store.SupplementTipBlock(types.Block{})
-		apply(b)
+		if err := apply(b); err != nil {
+			return fmt.Errorf("failed to apply block: %w", err)
+		}
 		bs4 := store.SupplementTipBlock(types.Block{})
 
-		if !cmp.Equal(bs1, bs3, options) || !cmp.Equal(bs2, bs4, options) {
+		if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
 			file, err := os.Create("bs.json")
 			if err != nil {
-				panic(err)
+				return err
 			}
 			defer file.Close()
 
-			if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2}); err != nil {
-				panic(err)
+			if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
+				return err
 			}
-			panic("repro: mismatched block supplement")
+			return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
 		}
 	}
+
+	return nil
 }
 
 func main() {
@@ -218,7 +213,9 @@ func main() {
 	args := cmd.Args()
 	switch cmd {
 	case fuzzCmd:
-		fuzzCommand()
+		if err := fuzzCommand(); err != nil {
+			log.Fatal("Failed to fuzz: ", err)
+		}
 	case reproCmd:
 		for _, arg := range args {
 			log.Println("Running:", arg)

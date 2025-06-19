@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"math"
-	"os"
 	"time"
 
 	"go.sia.tech/core/consensus"
@@ -54,7 +53,7 @@ type testChain struct {
 	states      []consensus.State
 }
 
-func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) *testChain {
+func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) (*testChain, error) {
 	var network *consensus.Network
 	var genesisBlock types.Block
 	if v2 {
@@ -70,15 +69,9 @@ func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) 
 		modifyGenesis(network, genesisBlock)
 	}
 
-	f, err := os.CreateTemp("", "consensus")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
 	store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), network, genesisBlock, nil)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	bs := consensus.V1BlockSupplement{Transactions: make([]consensus.V1TransactionSupplement, len(genesisBlock.Transactions))}
 
@@ -89,7 +82,7 @@ func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) 
 		blocks:      []types.Block{genesisBlock},
 		supplements: []consensus.V1BlockSupplement{bs},
 		states:      []consensus.State{genesisState},
-	}
+	}, nil
 }
 
 func (n *testChain) genesis() types.Block {
@@ -108,13 +101,13 @@ func (n *testChain) tip() types.ChainIndex {
 	return n.states[len(n.states)-1].Index
 }
 
-func (n *testChain) applyBlock(b types.Block) consensus.ApplyUpdate {
+func (n *testChain) applyBlock(b types.Block) (consensus.ApplyUpdate, error) {
 	cs := n.tipState()
 	bs := n.store.SupplementTipBlock(b)
 	if cs.Index.Height != math.MaxUint64 {
 		// don't validate genesis block
 		if err := consensus.ValidateBlock(cs, b, bs); err != nil {
-			panic(err)
+			return consensus.ApplyUpdate{}, err
 		}
 		if b.V2 != nil {
 			log.Printf("Parent state: %v (%v), got commitment hash: %v", cs.Index, stateHash(cs), b.V2.Commitment)
@@ -131,7 +124,7 @@ func (n *testChain) applyBlock(b types.Block) consensus.ApplyUpdate {
 	n.supplements = append(n.supplements, bs)
 	n.states = append(n.states, cs)
 
-	return au
+	return au, nil
 }
 
 func (n *testChain) revertBlock() consensus.RevertUpdate {

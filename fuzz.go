@@ -24,16 +24,19 @@ type fuzzer struct {
 	v2fces map[types.FileContractID]types.V2FileContractElement
 }
 
-func newFuzzer(rng *rand.Rand, pk types.PrivateKey) *fuzzer {
+func newFuzzer(rng *rand.Rand, pk types.PrivateKey) (*fuzzer, error) {
 	uc := types.StandardUnlockConditions(pk.PublicKey())
 	addr := uc.UnlockHash()
 
-	n := newTestChain(false, func(network *consensus.Network, genesisBlock types.Block) {
+	n, err := newTestChain(false, func(network *consensus.Network, genesisBlock types.Block) {
 		network.HardforkV2.AllowHeight = 200
 		network.HardforkV2.RequireHeight = 1000
 		genesisBlock.Transactions[0].SiacoinOutputs[0].Address = addr
 		genesisBlock.Transactions[0].SiafundOutputs[0].Address = addr
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	f := &fuzzer{
 		n: n,
@@ -55,16 +58,20 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey) *fuzzer {
 	_, au := consensus.ApplyBlock(n.network.GenesisState(), n.genesis(), bs, time.Time{})
 	f.processApplyUpdate(au)
 
-	return f
+	return f, nil
 }
 
 func (f *fuzzer) prob(p float64) bool {
 	return f.rng.Float64() < p
 }
 
-func (f *fuzzer) applyBlock(b types.Block) {
-	au := f.n.applyBlock(b)
+func (f *fuzzer) applyBlock(b types.Block) error {
+	au, err := f.n.applyBlock(b)
+	if err != nil {
+		return err
+	}
 	f.processApplyUpdate(au)
+	return nil
 }
 
 func (f *fuzzer) revertBlock() {
