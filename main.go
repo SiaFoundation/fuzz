@@ -77,18 +77,13 @@ func fuzzCommand() {
 
 			bs1 := f.n.store.SupplementTipBlock(types.Block{})
 			f.applyBlock(b)
-			f.revertBlock()
 			bs2 := f.n.store.SupplementTipBlock(types.Block{})
+			f.revertBlock()
+			bs3 := f.n.store.SupplementTipBlock(types.Block{})
 			f.applyBlock(b)
+			bs4 := f.n.store.SupplementTipBlock(types.Block{})
 
-			// sort.Slice(bs1.ExpiringFileContracts, func(i, j int) bool {
-			// 	return bytes.Compare(bs1.ExpiringFileContracts[i].ID[:], bs1.ExpiringFileContracts[j].ID[:]) < 0
-			// })
-			// sort.Slice(bs2.ExpiringFileContracts, func(i, j int) bool {
-			// 	return bytes.Compare(bs2.ExpiringFileContracts[i].ID[:], bs2.ExpiringFileContracts[j].ID[:]) < 0
-			// })
-
-			if !cmp.Equal(bs1, bs2, options) {
+			if !cmp.Equal(bs1, bs3, options) || !cmp.Equal(bs2, bs4, options) {
 				file, err := os.Create("bs.json")
 				if err != nil {
 					panic(err)
@@ -167,13 +162,35 @@ func reproCommand(path string) {
 		states = states[:len(states)-1]
 	}
 
+	options := cmp.Options([]cmp.Option{
+		cmpopts.EquateEmpty(),
+		cmp.AllowUnexported(consensus.Work{}),
+		cmp.Comparer(func(x, y types.StateElement) bool {
+			return x.LeafIndex == y.LeafIndex && reflect.DeepEqual(x.MerkleProof, y.MerkleProof)
+		}),
+	})
 	for i, b := range s.Blocks {
 		log.Println("Applying:", i)
 		log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(states[len(states)-1]))
 
 		apply(b)
+		bs1 := store.SupplementTipBlock(types.Block{})
 		revert()
 		apply(b)
+		bs2 := store.SupplementTipBlock(types.Block{})
+
+		if !cmp.Equal(bs1, bs2, options) {
+			file, err := os.Create("bs.json")
+			if err != nil {
+				panic(err)
+			}
+			defer file.Close()
+
+			if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2}); err != nil {
+				panic(err)
+			}
+			panic("repro: mismatched block supplement")
+		}
 	}
 }
 
