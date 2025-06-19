@@ -173,13 +173,15 @@ func reproCommand(path string) {
 		log.Println("Applying:", i)
 		log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(states[len(states)-1]))
 
-		apply(b)
 		bs1 := store.SupplementTipBlock(types.Block{})
-		revert()
 		apply(b)
 		bs2 := store.SupplementTipBlock(types.Block{})
+		revert()
+		bs3 := store.SupplementTipBlock(types.Block{})
+		apply(b)
+		bs4 := store.SupplementTipBlock(types.Block{})
 
-		if !cmp.Equal(bs1, bs2, options) {
+		if !cmp.Equal(bs1, bs3, options) || !cmp.Equal(bs2, bs4, options) {
 			file, err := os.Create("bs.json")
 			if err != nil {
 				panic(err)
