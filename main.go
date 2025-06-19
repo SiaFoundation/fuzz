@@ -219,7 +219,9 @@ func main() {
 	case reproCmd:
 		for _, arg := range args {
 			log.Println("Running:", arg)
-			reproCommand(arg)
+			if err := reproCommand(arg); err != nil {
+				log.Fatal("Failed to reproduce:", err)
+			}
 		}
 	}
 
