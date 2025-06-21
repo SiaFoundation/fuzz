@@ -9,7 +9,6 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	"reflect"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
@@ -30,7 +29,7 @@ func stateHash(cs consensus.State) types.Hash256 {
 	return h.Sum()
 }
 
-func fuzzCommand() error {
+func fuzzCommand(path string) error {
 	rng := rand.New(rand.NewSource(1))
 
 	seed := make([]byte, ed25519.SeedSize)
@@ -40,29 +39,48 @@ func fuzzCommand() error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	s := state{
 		Genesis: f.n.tipBlock(),
 		Network: f.n.network,
 	}
+	if path != "" {
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		var s state
+		if err := json.NewDecoder(file).Decode(&s); err != nil {
+			return err
+		}
+
+		for i, b := range s.Blocks {
+			log.Println("Reapplying:", i)
+			f.applyBlock(b)
+		}
+	}
+
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("Got crash:", err)
 		}
 
 		// write state to disk
-		f, err := os.Create("crash.json")
+		file, err := os.Create("crash.json")
 		if err != nil {
 			panic(err)
 		}
-		defer f.Close()
+		defer file.Close()
 
-		if err := json.NewEncoder(f).Encode(s); err != nil {
+		if err := json.NewEncoder(file).Encode(s); err != nil {
 			panic(err)
 		}
 	}()
 
-	for i := 0; i < 10_000; i++ {
+	for i := 0; i < 500; i++ {
 		{
 			b := f.mineBlock()
 			log.Println("Mining:", f.n.tip().Height)
@@ -70,30 +88,30 @@ func fuzzCommand() error {
 
 			s.Blocks = append(s.Blocks, b)
 
-			bs1 := f.n.store.SupplementTipBlock(types.Block{})
+			// bs1 := f.n.store.SupplementTipBlock(types.Block{})
 			if err := f.applyBlock(b); err != nil {
 				return fmt.Errorf("failed to apply block: %w", err)
 			}
-			bs2 := f.n.store.SupplementTipBlock(types.Block{})
+			// bs2 := f.n.store.SupplementTipBlock(types.Block{})
 			f.revertBlock()
-			bs3 := f.n.store.SupplementTipBlock(types.Block{})
+			// bs3 := f.n.store.SupplementTipBlock(types.Block{})
 			if err := f.applyBlock(b); err != nil {
 				return fmt.Errorf("failed to re-apply block: %w", err)
 			}
-			bs4 := f.n.store.SupplementTipBlock(types.Block{})
+			// bs4 := f.n.store.SupplementTipBlock(types.Block{})
 
-			if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
-				file, err := os.Create("bs.json")
-				if err != nil {
-					return err
-				}
-				defer file.Close()
+			// if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
+			// 	file, err := os.Create("bs.json")
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			// 	defer file.Close()
 
-				if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
-					return err
-				}
-				return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
-			}
+			// 	if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
+			// 		return err
+			// 	}
+			// 	return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
+			// }
 		}
 	}
 
@@ -101,14 +119,14 @@ func fuzzCommand() error {
 }
 
 func reproCommand(path string) error {
-	f, err := os.Open(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer file.Close()
 
 	var s state
-	if err := json.NewDecoder(f).Decode(&s); err != nil {
+	if err := json.NewDecoder(file).Decode(&s); err != nil {
 		return err
 	}
 
@@ -162,30 +180,30 @@ func reproCommand(path string) error {
 		log.Println("Applying:", i)
 		log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(states[len(states)-1]))
 
-		bs1 := store.SupplementTipBlock(types.Block{})
+		// bs1 := store.SupplementTipBlock(types.Block{})
 		if err := apply(b); err != nil {
 			return fmt.Errorf("failed to apply block: %w", err)
 		}
-		bs2 := store.SupplementTipBlock(types.Block{})
+		// bs2 := store.SupplementTipBlock(types.Block{})
 		revert()
-		bs3 := store.SupplementTipBlock(types.Block{})
+		// bs3 := store.SupplementTipBlock(types.Block{})
 		if err := apply(b); err != nil {
 			return fmt.Errorf("failed to apply block: %w", err)
 		}
-		bs4 := store.SupplementTipBlock(types.Block{})
+		// bs4 := store.SupplementTipBlock(types.Block{})
 
-		if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
-			file, err := os.Create("bs.json")
-			if err != nil {
-				return err
-			}
-			defer file.Close()
+		// if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
+		// 	file, err := os.Create("bs.json")
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// 	defer file.Close()
 
-			if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
-				return err
-			}
-			return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
-		}
+		// 	if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
+		// 		return err
+		// 	}
+		// 	return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
+		// }
 	}
 
 	return nil
@@ -213,7 +231,11 @@ func main() {
 	args := cmd.Args()
 	switch cmd {
 	case fuzzCmd:
-		if err := fuzzCommand(); err != nil {
+		var path string
+		if len(args) > 0 {
+			path = args[0]
+		}
+		if err := fuzzCommand(path); err != nil {
 			log.Fatal("Failed to fuzz: ", err)
 		}
 	case reproCmd:

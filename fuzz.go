@@ -61,6 +61,10 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey) (*fuzzer, error) {
 	return f, nil
 }
 
+func (f *fuzzer) Close() error {
+	return f.n.Close()
+}
+
 func (f *fuzzer) prob(p float64) bool {
 	return f.rng.Float64() < p
 }

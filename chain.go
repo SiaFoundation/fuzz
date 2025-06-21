@@ -10,6 +10,7 @@ import (
 	"go.sia.tech/coreutils"
 	"go.sia.tech/coreutils/chain"
 	"go.sia.tech/coreutils/testutil"
+	"go.uber.org/zap"
 )
 
 func mineBlock(state consensus.State, txns []types.Transaction, v2Txns []types.V2Transaction, minerAddr types.Address) types.Block {
@@ -69,13 +70,24 @@ func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) 
 		modifyGenesis(network, genesisBlock)
 	}
 
-	store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), network, genesisBlock, nil)
+	db, err := coreutils.OpenBoltChainDB("consensus.db")
+	if err != nil {
+		return nil, err
+	}
+
+	log, err := zap.NewDevelopment()
+	if err != nil {
+		return nil, err
+	}
+
+	store, genesisState, err := chain.NewDBStore(db, network, genesisBlock, chain.NewZapMigrationLogger(log))
 	if err != nil {
 		return nil, err
 	}
 	bs := consensus.V1BlockSupplement{Transactions: make([]consensus.V1TransactionSupplement, len(genesisBlock.Transactions))}
 
 	return &testChain{
+		db:    db,
 		store: store,
 
 		network:     network,
@@ -83,6 +95,10 @@ func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) 
 		supplements: []consensus.V1BlockSupplement{bs},
 		states:      []consensus.State{genesisState},
 	}, nil
+}
+
+func (n *testChain) Close() error {
+	return n.db.Close()
 }
 
 func (n *testChain) genesis() types.Block {

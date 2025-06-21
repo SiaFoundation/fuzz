@@ -4,8 +4,8 @@ go 1.24.1
 
 require (
 	github.com/google/go-cmp v0.6.0
-	go.sia.tech/core v0.13.3-0.20250616154238-4c58987023c7
-	go.sia.tech/coreutils v0.16.3-0.20250619003905-26d112cca770
+	go.sia.tech/core v0.14.1-0.20250620140318-8152c7efd281
+	go.sia.tech/coreutils v0.16.4-0.20250620214558-a2a0823a9c78
 	lukechampine.com/flagg v1.1.1
 )
 
