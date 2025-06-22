@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"log"
 	"math"
 	"time"
 
@@ -63,8 +62,8 @@ func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) 
 		network, genesisBlock = testutil.Network()
 	}
 	if v2 {
-		network.HardforkV2.AllowHeight = 1000
-		network.HardforkV2.RequireHeight = 2000
+		network.HardforkV2.AllowHeight = 300
+		network.HardforkV2.RequireHeight = 700
 	}
 	if modifyGenesis != nil {
 		modifyGenesis(network, genesisBlock)
@@ -147,9 +146,6 @@ func (n *testChain) applyBlock(b types.Block) (consensus.ApplyUpdate, error) {
 		// don't validate genesis block
 		if err := consensus.ValidateBlock(cs, b, bs); err != nil {
 			return consensus.ApplyUpdate{}, err
-		}
-		if b.V2 != nil {
-			log.Printf("Parent state: %v (%v), got commitment hash: %v", cs.Index, stateHash(cs), b.V2.Commitment)
 		}
 	}
 
