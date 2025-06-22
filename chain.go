@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"math"
 	"time"
@@ -44,9 +45,8 @@ func mineBlock(state consensus.State, txns []types.Transaction, v2Txns []types.V
 }
 
 type testChain struct {
-	tempPath string
-	db       *coreutils.BoltChainDB
-	store    *chain.DBStore
+	db    *coreutils.BoltChainDB
+	store *chain.DBStore
 
 	network     *consensus.Network
 	blocks      []types.Block
@@ -63,8 +63,8 @@ func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) 
 		network, genesisBlock = testutil.Network()
 	}
 	if v2 {
-		network.HardforkV2.AllowHeight = 200
-		network.HardforkV2.RequireHeight = 1000
+		network.HardforkV2.AllowHeight = 1000
+		network.HardforkV2.RequireHeight = 2000
 	}
 	if modifyGenesis != nil {
 		modifyGenesis(network, genesisBlock)
@@ -84,16 +84,39 @@ func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) 
 	if err != nil {
 		return nil, err
 	}
-	bs := consensus.V1BlockSupplement{Transactions: make([]consensus.V1TransactionSupplement, len(genesisBlock.Transactions))}
+
+	var blocks []types.Block
+	var supplements []consensus.V1BlockSupplement
+	states := []consensus.State{network.GenesisState()}
+	for i := uint64(0); i <= genesisState.Index.Height; i++ {
+		index, ok := store.BestIndex(i)
+		if !ok {
+			return nil, errors.New("failed to get BestIndex")
+		}
+		b, bs, ok := store.Block(index.ID)
+		if !ok {
+			return nil, errors.New("failed to get Block")
+		} else if bs == nil {
+			bs = &consensus.V1BlockSupplement{Transactions: make([]consensus.V1TransactionSupplement, len(b.Transactions))}
+		}
+		cs, ok := store.State(index.ID)
+		if !ok {
+			return nil, errors.New("failed to get State")
+		}
+
+		blocks = append(blocks, b)
+		supplements = append(supplements, *bs)
+		states = append(states, cs)
+	}
 
 	return &testChain{
 		db:    db,
 		store: store,
 
 		network:     network,
-		blocks:      []types.Block{genesisBlock},
-		supplements: []consensus.V1BlockSupplement{bs},
-		states:      []consensus.State{genesisState},
+		blocks:      blocks,
+		supplements: supplements,
+		states:      states,
 	}, nil
 }
 

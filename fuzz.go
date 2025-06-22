@@ -1,8 +1,8 @@
 package main
 
 import (
+	"math"
 	"math/rand"
-	"time"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
@@ -54,9 +54,20 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey) (*fuzzer, error) {
 		v2fces: make(map[types.FileContractID]types.V2FileContractElement),
 	}
 
-	bs := consensus.V1BlockSupplement{Transactions: make([]consensus.V1TransactionSupplement, len(n.genesis().Transactions))}
-	_, au := consensus.ApplyBlock(n.network.GenesisState(), n.genesis(), bs, time.Time{})
-	f.processApplyUpdate(au)
+	for i := range f.n.blocks {
+		cs := f.n.states[i]
+		b := f.n.blocks[i]
+		bs := f.n.supplements[i]
+
+		if cs.Index.Height != math.MaxUint64 {
+			// don't validate genesis block
+			if err := consensus.ValidateBlock(cs, b, bs); err != nil {
+				return nil, err
+			}
+		}
+		_, au := consensus.ApplyBlock(cs, b, bs, b.Timestamp)
+		f.processApplyUpdate(au)
+	}
 
 	return f, nil
 }

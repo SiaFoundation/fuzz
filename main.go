@@ -29,7 +29,7 @@ func stateHash(cs consensus.State) types.Hash256 {
 	return h.Sum()
 }
 
-func fuzzCommand(path string) error {
+func fuzzCommand() error {
 	rng := rand.New(rand.NewSource(1))
 
 	seed := make([]byte, ed25519.SeedSize)
@@ -44,23 +44,6 @@ func fuzzCommand(path string) error {
 	s := state{
 		Genesis: f.n.tipBlock(),
 		Network: f.n.network,
-	}
-	if path != "" {
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		var s state
-		if err := json.NewDecoder(file).Decode(&s); err != nil {
-			return err
-		}
-
-		for i, b := range s.Blocks {
-			log.Println("Reapplying:", i)
-			f.applyBlock(b)
-		}
 	}
 
 	defer func() {
@@ -231,11 +214,7 @@ func main() {
 	args := cmd.Args()
 	switch cmd {
 	case fuzzCmd:
-		var path string
-		if len(args) > 0 {
-			path = args[0]
-		}
-		if err := fuzzCommand(path); err != nil {
+		if err := fuzzCommand(); err != nil {
 			log.Fatal("Failed to fuzz: ", err)
 		}
 	case reproCmd:
