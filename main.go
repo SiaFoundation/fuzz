@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"reflect"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
@@ -29,7 +30,7 @@ func stateHash(cs consensus.State) types.Hash256 {
 	return h.Sum()
 }
 
-func fuzzCommand() error {
+func fuzzCommand(checkSupplement bool) error {
 	rng := rand.New(rand.NewSource(1))
 
 	seed := make([]byte, ed25519.SeedSize)
@@ -71,30 +72,30 @@ func fuzzCommand() error {
 
 			s.Blocks = append(s.Blocks, b)
 
-			// bs1 := f.n.store.SupplementTipBlock(types.Block{})
+			bs1 := f.n.store.SupplementTipBlock(types.Block{})
 			if err := f.applyBlock(b); err != nil {
 				return fmt.Errorf("failed to apply block: %w", err)
 			}
-			// bs2 := f.n.store.SupplementTipBlock(types.Block{})
+			bs2 := f.n.store.SupplementTipBlock(types.Block{})
 			f.revertBlock()
-			// bs3 := f.n.store.SupplementTipBlock(types.Block{})
+			bs3 := f.n.store.SupplementTipBlock(types.Block{})
 			if err := f.applyBlock(b); err != nil {
 				return fmt.Errorf("failed to re-apply block: %w", err)
 			}
-			// bs4 := f.n.store.SupplementTipBlock(types.Block{})
+			bs4 := f.n.store.SupplementTipBlock(types.Block{})
 
-			// if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
-			// 	file, err := os.Create("bs.json")
-			// 	if err != nil {
-			// 		return err
-			// 	}
-			// 	defer file.Close()
+			if checkSupplement && !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
+				file, err := os.Create("bs.json")
+				if err != nil {
+					return err
+				}
+				defer file.Close()
 
-			// 	if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
-			// 		return err
-			// 	}
-			// 	return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
-			// }
+				if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
+					return err
+				}
+				return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
+			}
 		}
 	}
 
@@ -163,30 +164,30 @@ func reproCommand(path string) error {
 		log.Println("Applying:", i)
 		log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(states[len(states)-1]))
 
-		// bs1 := store.SupplementTipBlock(types.Block{})
+		bs1 := store.SupplementTipBlock(types.Block{})
 		if err := apply(b); err != nil {
 			return fmt.Errorf("failed to apply block: %w", err)
 		}
-		// bs2 := store.SupplementTipBlock(types.Block{})
+		bs2 := store.SupplementTipBlock(types.Block{})
 		revert()
-		// bs3 := store.SupplementTipBlock(types.Block{})
+		bs3 := store.SupplementTipBlock(types.Block{})
 		if err := apply(b); err != nil {
 			return fmt.Errorf("failed to apply block: %w", err)
 		}
-		// bs4 := store.SupplementTipBlock(types.Block{})
+		bs4 := store.SupplementTipBlock(types.Block{})
 
-		// if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
-		// 	file, err := os.Create("bs.json")
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	defer file.Close()
+		if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
+			file, err := os.Create("bs.json")
+			if err != nil {
+				return err
+			}
+			defer file.Close()
 
-		// 	if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
-		// 		return err
-		// 	}
-		// 	return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
-		// }
+			if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
+				return err
+			}
+			return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
+		}
 	}
 
 	return nil
@@ -214,7 +215,11 @@ func main() {
 	args := cmd.Args()
 	switch cmd {
 	case fuzzCmd:
-		if err := fuzzCommand(); err != nil {
+		var checkSupplement bool
+		if len(args) > 0 && args[0] == "check_supplement" {
+			checkSupplement = true
+		}
+		if err := fuzzCommand(checkSupplement); err != nil {
 			log.Fatal("Failed to fuzz: ", err)
 		}
 	case reproCmd:
