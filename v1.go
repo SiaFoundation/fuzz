@@ -1,21 +1,25 @@
 package main
 
 import (
+	"crypto/ed25519"
+
 	proto2 "go.sia.tech/core/rhp/v2"
 	"go.sia.tech/core/types"
 )
 
-func prepareContract(addr types.Address, endHeight uint64) types.FileContract {
-	rk := types.GeneratePrivateKey().PublicKey()
-	rAddr := types.StandardUnlockHash(rk)
-	hk := types.GeneratePrivateKey().PublicKey()
+func (f *fuzzer) prepareContract(endHeight uint64) types.FileContract {
+	seed := make([]byte, ed25519.SeedSize)
+	f.rng.Read(seed)
+	pk := types.NewPrivateKeyFromSeed(seed)
+	publicKey := pk.PublicKey()
+
 	hs := proto2.HostSettings{
 		WindowSize: 1,
-		Address:    types.StandardUnlockHash(hk),
+		Address:    types.StandardUnlockHash(publicKey),
 	}
 	sc := types.Siacoins(1)
-	fc := proto2.PrepareContractFormation(rk, hk, sc.Mul64(2), sc.Mul64(2), endHeight, hs, rAddr)
-	fc.UnlockHash = addr
+	fc := proto2.PrepareContractFormation(publicKey, publicKey, sc.Mul64(2), sc.Mul64(2), endHeight, hs, hs.Address)
+	fc.UnlockHash = f.addr
 	return fc
 }
 
@@ -46,7 +50,7 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	var amount types.Currency
 	{
 		for i, count := 0, f.rng.Intn(10); i < count; i++ {
-			fc := prepareContract(f.addr, f.n.tip().Height+10)
+			fc := f.prepareContract(f.n.tip().Height + 10)
 			txn.FileContracts = append(txn.FileContracts, fc)
 			amount = amount.Add(fc.Payout)
 		}
