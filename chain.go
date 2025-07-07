@@ -62,8 +62,8 @@ func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) 
 		network, genesisBlock = testutil.Network()
 	}
 	if v2 {
-		network.HardforkV2.AllowHeight = 300
-		network.HardforkV2.RequireHeight = 700
+		network.HardforkV2.AllowHeight = 250
+		network.HardforkV2.RequireHeight = 400
 	}
 	if modifyGenesis != nil {
 		modifyGenesis(network, genesisBlock)
