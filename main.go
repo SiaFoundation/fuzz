@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/json"
 	"flag"
@@ -10,6 +11,7 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
+	"sort"
 
 	"go.sia.tech/core/consensus"
 	"go.sia.tech/core/types"
@@ -30,7 +32,13 @@ func stateHash(cs consensus.State) types.Hash256 {
 	return h.Sum()
 }
 
-func fuzzCommand(checkSupplement bool) error {
+func sortSupplement(bs *consensus.V1BlockSupplement) {
+	sort.Slice(bs.ExpiringFileContracts, func(i, j int) bool {
+		return bytes.Compare(bs.ExpiringFileContracts[i].ID[:], bs.ExpiringFileContracts[j].ID[:]) < 0
+	})
+}
+
+func fuzzCommand() error {
 	rng := rand.New(rand.NewSource(1))
 
 	seed := make([]byte, ed25519.SeedSize)
@@ -84,7 +92,11 @@ func fuzzCommand(checkSupplement bool) error {
 			}
 			bs4 := f.n.store.SupplementTipBlock(types.Block{})
 
-			if checkSupplement && !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
+			sortSupplement(&bs1)
+			sortSupplement(&bs2)
+			sortSupplement(&bs3)
+			sortSupplement(&bs4)
+			if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
 				file, err := os.Create("bs.json")
 				if err != nil {
 					return err
@@ -176,6 +188,10 @@ func reproCommand(path string) error {
 		}
 		bs4 := store.SupplementTipBlock(types.Block{})
 
+		sortSupplement(&bs1)
+		sortSupplement(&bs2)
+		sortSupplement(&bs3)
+		sortSupplement(&bs4)
 		if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
 			file, err := os.Create("bs.json")
 			if err != nil {
@@ -215,11 +231,7 @@ func main() {
 	args := cmd.Args()
 	switch cmd {
 	case fuzzCmd:
-		var checkSupplement bool
-		if len(args) > 0 && args[0] == "check_supplement" {
-			checkSupplement = true
-		}
-		if err := fuzzCommand(checkSupplement); err != nil {
+		if err := fuzzCommand(); err != nil {
 			log.Fatal("Failed to fuzz: ", err)
 		}
 	case reproCmd:
