@@ -56,10 +56,6 @@ func fuzzCommand() error {
 	}
 
 	defer func() {
-		if err := recover(); err != nil {
-			log.Println("Got crash:", err)
-		}
-
 		// write state to disk
 		file, err := os.Create("crash.json")
 		if err != nil {
@@ -68,6 +64,10 @@ func fuzzCommand() error {
 		defer file.Close()
 
 		if err := json.NewEncoder(file).Encode(s); err != nil {
+			panic(err)
+		}
+
+		if err := recover(); err != nil {
 			panic(err)
 		}
 	}()
@@ -232,13 +232,13 @@ func main() {
 	switch cmd {
 	case fuzzCmd:
 		if err := fuzzCommand(); err != nil {
-			log.Fatal("Failed to fuzz: ", err)
+			panic(err)
 		}
 	case reproCmd:
 		for _, arg := range args {
 			log.Println("Running:", arg)
 			if err := reproCommand(arg); err != nil {
-				log.Fatal("Failed to reproduce:", err)
+				panic(err)
 			}
 		}
 	}
