@@ -24,13 +24,13 @@ type fuzzer struct {
 	v2fces map[types.FileContractID]types.V2FileContractElement
 }
 
-func newFuzzer(rng *rand.Rand, pk types.PrivateKey) (*fuzzer, error) {
+func newFuzzer(rng *rand.Rand, pk types.PrivateKey, allowHeight, requireHeight uint64) (*fuzzer, error) {
 	uc := types.StandardUnlockConditions(pk.PublicKey())
 	addr := uc.UnlockHash()
 
 	n, err := newTestChain(false, func(network *consensus.Network, genesisBlock types.Block) {
-		network.HardforkV2.AllowHeight = 200
-		network.HardforkV2.RequireHeight = 1000
+		network.HardforkV2.AllowHeight = allowHeight
+		network.HardforkV2.RequireHeight = requireHeight
 		genesisBlock.Transactions[0].SiacoinOutputs[0].Address = addr
 		genesisBlock.Transactions[0].SiafundOutputs[0].Address = addr
 	})

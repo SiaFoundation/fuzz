@@ -38,13 +38,13 @@ func sortSupplement(bs *consensus.V1BlockSupplement) {
 	})
 }
 
-func fuzzCommand() error {
+func fuzzCommand(allowHeight, requireHeight uint64, blocks int) error {
 	rng := rand.New(rand.NewSource(1))
 
 	seed := make([]byte, ed25519.SeedSize)
 	rng.Read(seed)
 	pk := types.NewPrivateKeyFromSeed(seed)
-	f, err := newFuzzer(rng, pk)
+	f, err := newFuzzer(rng, pk, allowHeight, requireHeight)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func fuzzCommand() error {
 		}
 	}()
 
-	for i := 0; i < 500; i++ {
+	for i := 0; i < blocks; i++ {
 		{
 			b := f.mineBlock()
 			log.Println("Mining:", f.n.tip().Height)
@@ -215,6 +215,10 @@ func main() {
 	rootCmd.Usage = flagg.SimpleUsage(rootCmd, "Sia core fuzzer")
 
 	fuzzCmd := flagg.New("fuzz", "Randomly generate blocks")
+	allowHeight := fuzzCmd.Uint64("allowHeight", 250, "v2 hardfork allow height")
+	requireHeight := fuzzCmd.Uint64("requireHeight", 400, "v2 hardfork require height")
+	blocks := fuzzCmd.Int("blocks", 500, "number of blocks to randomly generate")
+
 	reproCmd := flagg.New("repro", "Reproduce crash")
 
 	// construct the command hierarchy
@@ -231,7 +235,7 @@ func main() {
 	args := cmd.Args()
 	switch cmd {
 	case fuzzCmd:
-		if err := fuzzCommand(); err != nil {
+		if err := fuzzCommand(*allowHeight, *requireHeight, *blocks); err != nil {
 			panic(err)
 		}
 	case reproCmd:
