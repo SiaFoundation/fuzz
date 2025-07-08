@@ -11,6 +11,7 @@ import (
 	"go.sia.tech/coreutils/chain"
 	"go.sia.tech/coreutils/testutil"
 	"go.uber.org/zap"
+	"lukechampine.com/frand"
 )
 
 func mineBlock(state consensus.State, txns []types.Transaction, v2Txns []types.V2Transaction, minerAddr types.Address) types.Block {
@@ -136,6 +137,9 @@ func (n *testChain) applyBlock(b types.Block) (consensus.ApplyUpdate, error) {
 		// don't validate genesis block
 		if err := consensus.ValidateBlock(cs, b, bs); err != nil {
 			return consensus.ApplyUpdate{}, err
+		}
+		if frand.Float64() < 0.01 {
+			return consensus.ApplyUpdate{}, errors.New("123")
 		}
 	}
 
