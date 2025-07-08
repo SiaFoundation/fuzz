@@ -53,6 +53,7 @@ func fuzzCommand(allowHeight, requireHeight uint64, blocks int) error {
 	s := state{
 		Genesis: f.n.tipBlock(),
 		Network: f.n.network,
+		Blocks: f.n.blocks,
 	}
 
 	defer func() {
@@ -76,7 +77,7 @@ func fuzzCommand(allowHeight, requireHeight uint64, blocks int) error {
 		{
 			b := f.mineBlock()
 			log.Println("Mining:", f.n.tip().Height)
-			log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(f.n.states[len(f.n.states)-1]))
+			log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(f.n.tipState()))
 
 			s.Blocks = append(s.Blocks, b)
 
@@ -100,6 +101,24 @@ func fuzzCommand(allowHeight, requireHeight uint64, blocks int) error {
 				return fmt.Errorf("mismatched block supplement, run `./fuzzer repro repro.json`")
 			}
 		}
+	}
+
+	// revert all blocks then reapply and see if we end up with same state
+	state := f.n.tipState()
+	for range s.Blocks {
+		f.revertBlock()
+		log.Println("Reverting:", f.n.tip())
+	}
+	for _, b := range s.Blocks {
+		if err := f.applyBlock(b); err != nil {
+			return fmt.Errorf("failed to apply block after reverting all: %w", err)
+		}
+		log.Println("Re-applying:", f.n.tip())
+	}
+
+	newState := f.n.tipState()
+	if state != newState {
+		return fmt.Errorf("mismatched state hash after reverting all and reapplying, expected %v, got %v", state, newState)
 	}
 
 	return nil
