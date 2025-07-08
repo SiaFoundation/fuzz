@@ -272,7 +272,12 @@ func (f *fuzzer) generateV2Transaction(originalParents map[types.FileContractID]
 	}
 	// so we don't get "transactions cannot be empty"
 	txn.ArbitraryData = []byte("1234")
-	signV2TransactionWithContracts(f.n.tipState(), f.pk, &txn)
+	txn.Attestations = []types.Attestation{{
+		PublicKey: f.pk.PublicKey(),
+		Key:       "test",
+		Value:     []byte("1234"),
+	}}
+	signV2Transaction(f.n.tipState(), f.pk, &txn)
 
 	for i := range txn.SiacoinOutputs {
 		sce := txn.EphemeralSiacoinOutput(i)

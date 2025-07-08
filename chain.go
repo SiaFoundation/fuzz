@@ -53,18 +53,8 @@ type testChain struct {
 	states      []consensus.State
 }
 
-func newTestChain(v2 bool, modifyGenesis func(*consensus.Network, types.Block)) (*testChain, error) {
-	var network *consensus.Network
-	var genesisBlock types.Block
-	if v2 {
-		network, genesisBlock = testutil.V2Network()
-	} else {
-		network, genesisBlock = testutil.Network()
-	}
-	if v2 {
-		network.HardforkV2.AllowHeight = 250
-		network.HardforkV2.RequireHeight = 400
-	}
+func newTestChain(modifyGenesis func(*consensus.Network, types.Block)) (*testChain, error) {
+	network, genesisBlock := testutil.Network()
 	if modifyGenesis != nil {
 		modifyGenesis(network, genesisBlock)
 	}
@@ -183,9 +173,9 @@ func (n *testChain) mineTransactions(txns []types.Transaction, v2Txns []types.V2
 	n.applyBlock(b)
 }
 
-// signTransactionWithContracts signs a transaction using the specified private
-// keys, including contract revisions.
-func signTransactionWithContracts(cs consensus.State, pk types.PrivateKey, txn *types.Transaction) {
+// signTransaction signs a transaction using the specified private keys,
+// including contract revisions.
+func signTransaction(cs consensus.State, pk types.PrivateKey, txn *types.Transaction) {
 	appendSig := func(key types.PrivateKey, pubkeyIndex uint64, parentID types.Hash256) {
 		sig := key.SignHash(cs.WholeSigHash(*txn, parentID, pubkeyIndex, 0, nil))
 		txn.Signatures = append(txn.Signatures, types.TransactionSignature{
@@ -206,9 +196,12 @@ func signTransactionWithContracts(cs consensus.State, pk types.PrivateKey, txn *
 	}
 }
 
-// signV2TransactionWithContracts signs a transaction using the specified
-// private keys, including contracts and revisions.
-func signV2TransactionWithContracts(cs consensus.State, pk types.PrivateKey, txn *types.V2Transaction) {
+// signV2Transaction signs a transaction using the specified private key,
+// including contracts and revisions.
+func signV2Transaction(cs consensus.State, pk types.PrivateKey, txn *types.V2Transaction) {
+	for i := range txn.Attestations {
+		txn.Attestations[i].Signature = pk.SignHash(cs.AttestationSigHash(txn.Attestations[i]))
+	}
 	for i := range txn.SiacoinInputs {
 		txn.SiacoinInputs[i].SatisfiedPolicy.Signatures = []types.Signature{pk.SignHash(cs.InputSigHash(*txn))}
 	}

@@ -28,7 +28,7 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey, allowHeight, requireHeight u
 	uc := types.StandardUnlockConditions(pk.PublicKey())
 	addr := uc.UnlockHash()
 
-	n, err := newTestChain(false, func(network *consensus.Network, genesisBlock types.Block) {
+	n, err := newTestChain(func(network *consensus.Network, genesisBlock types.Block) {
 		network.HardforkV2.AllowHeight = allowHeight
 		network.HardforkV2.RequireHeight = requireHeight
 		genesisBlock.Transactions[0].SiacoinOutputs[0].Address = addr
@@ -74,10 +74,6 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey, allowHeight, requireHeight u
 
 func (f *fuzzer) Close() error {
 	return f.n.Close()
-}
-
-func (f *fuzzer) prob(p float64) bool {
-	return f.rng.Float64() < p
 }
 
 func (f *fuzzer) applyBlock(b types.Block) error {

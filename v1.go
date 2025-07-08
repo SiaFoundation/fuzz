@@ -152,7 +152,7 @@ func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 			}
 		}
 	}
-	signTransactionWithContracts(f.n.tipState(), f.pk, &txn)
+	signTransaction(f.n.tipState(), f.pk, &txn)
 
 	for i, sco := range txn.SiacoinOutputs {
 		id := txn.SiacoinOutputID(i)
