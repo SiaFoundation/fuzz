@@ -97,16 +97,7 @@ func fuzzCommand(allowHeight, requireHeight uint64, blocks int) error {
 			sortSupplement(&bs3)
 			sortSupplement(&bs4)
 			if !reflect.DeepEqual(bs1, bs3) || !reflect.DeepEqual(bs2, bs4) {
-				file, err := os.Create("bs.json")
-				if err != nil {
-					return err
-				}
-				defer file.Close()
-
-				if err := json.NewEncoder(file).Encode([]consensus.V1BlockSupplement{bs1, bs2, bs3, bs4}); err != nil {
-					return err
-				}
-				return fmt.Errorf("repro: mismatched block supplement, wrote bs1, bs2, bs3, bs4 to bs.json")
+				return fmt.Errorf("mismatched block supplement, run `./fuzzer repro repro.json`")
 			}
 		}
 	}
