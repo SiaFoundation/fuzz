@@ -57,7 +57,7 @@ func fuzzCommand(allowHeight, requireHeight uint64, blocks int) error {
 
 	defer func() {
 		// write state to disk
-		file, err := os.Create("crash.json")
+		file, err := os.Create("repro.json")
 		if err != nil {
 			panic(err)
 		}
