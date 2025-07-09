@@ -113,7 +113,7 @@ func fuzzCommand(allowHeight, requireHeight, blocks uint64) error {
 		if err := f.applyBlock(b); err != nil {
 			return fmt.Errorf("failed to apply block after reverting all: %w", err)
 		}
-		log.Println("Re-applyed:", f.n.tip())
+		log.Println("Re-applied:", f.n.tip())
 	}
 
 	newState := f.n.tipState()
