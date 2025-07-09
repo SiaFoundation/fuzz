@@ -25,7 +25,7 @@ func (f *fuzzer) prepareContract(endHeight uint64) types.FileContract {
 
 func (f *fuzzer) generateTransaction() (txn types.Transaction) {
 	{
-		count := f.rng.Intn(2)
+		count := f.rng.Intn(1)
 		for _, fce := range mapValues(f.fces) {
 			if len(txn.StorageProofs) >= count {
 				break

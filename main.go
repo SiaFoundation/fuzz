@@ -38,7 +38,7 @@ func sortSupplement(bs *consensus.V1BlockSupplement) {
 	})
 }
 
-func fuzzCommand(allowHeight, requireHeight uint64, blocks int) error {
+func fuzzCommand(allowHeight, requireHeight, blocks uint64) error {
 	rng := rand.New(rand.NewSource(1))
 
 	seed := make([]byte, ed25519.SeedSize)
@@ -51,9 +51,9 @@ func fuzzCommand(allowHeight, requireHeight uint64, blocks int) error {
 	defer f.Close()
 
 	s := state{
-		Genesis: f.n.tipBlock(),
+		Genesis: f.n.blocks[0],
 		Network: f.n.network,
-		Blocks: f.n.blocks,
+		Blocks:  f.n.blocks[1:], // don't include genesis
 	}
 
 	defer func() {
@@ -73,7 +73,7 @@ func fuzzCommand(allowHeight, requireHeight uint64, blocks int) error {
 		}
 	}()
 
-	for i := 0; i < blocks; i++ {
+	for range blocks {
 		{
 			b := f.mineBlock()
 			log.Println("Mining:", f.n.tip().Height)
@@ -105,15 +105,15 @@ func fuzzCommand(allowHeight, requireHeight uint64, blocks int) error {
 
 	// revert all blocks then reapply and see if we end up with same state
 	state := f.n.tipState()
-	for range s.Blocks {
-		f.revertBlock()
+	for range len(s.Blocks) {
 		log.Println("Reverting:", f.n.tip())
+		f.revertBlock()
 	}
 	for _, b := range s.Blocks {
 		if err := f.applyBlock(b); err != nil {
 			return fmt.Errorf("failed to apply block after reverting all: %w", err)
 		}
-		log.Println("Re-applying:", f.n.tip())
+		log.Println("Re-applyed:", f.n.tip())
 	}
 
 	newState := f.n.tipState()
@@ -227,7 +227,7 @@ func main() {
 	fuzzCmd := flagg.New("fuzz", "Randomly generate blocks")
 	allowHeight := fuzzCmd.Uint64("allowHeight", 250, "v2 hardfork allow height")
 	requireHeight := fuzzCmd.Uint64("requireHeight", 400, "v2 hardfork require height")
-	blocks := fuzzCmd.Int("blocks", 500, "number of blocks to randomly generate")
+	blocks := fuzzCmd.Uint64("blocks", 500, "number of blocks to randomly generate")
 
 	reproCmd := flagg.New("repro", "Reproduce crash")
 

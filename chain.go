@@ -113,14 +113,6 @@ func (n *testChain) Close() error {
 	return n.db.Close()
 }
 
-func (n *testChain) genesis() types.Block {
-	return n.blocks[0]
-}
-
-func (n *testChain) tipBlock() types.Block {
-	return n.blocks[len(n.blocks)-1]
-}
-
 func (n *testChain) tipState() consensus.State {
 	return n.states[len(n.states)-1]
 }
