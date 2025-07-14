@@ -124,6 +124,10 @@ func (n *testChain) tip() types.ChainIndex {
 func (n *testChain) applyBlock(b types.Block) (consensus.ApplyUpdate, error) {
 	cs := n.tipState()
 	bs := n.store.SupplementTipBlock(b)
+	if (cs.Index.Height + 1) >= cs.Network.HardforkV2.RequireHeight {
+		bs = consensus.V1BlockSupplement{}
+	}
+
 	if cs.Index.Height != math.MaxUint64 {
 		// don't validate genesis block
 		if err := consensus.ValidateBlock(cs, b, bs); err != nil {

@@ -58,6 +58,9 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey, allowHeight, requireHeight u
 		cs := f.n.states[i]
 		b := f.n.blocks[i]
 		bs := f.n.supplements[i]
+		if (cs.Index.Height + 1) >= cs.Network.HardforkV2.RequireHeight {
+			bs = consensus.V1BlockSupplement{}
+		}
 
 		if cs.Index.Height != math.MaxUint64 {
 			// don't validate genesis block
