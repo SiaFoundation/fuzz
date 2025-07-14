@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"log"
 	"math"
 	"time"
 
@@ -23,6 +24,9 @@ func mineBlock(state consensus.State, txns []types.Transaction, v2Txns []types.V
 	for _, txn := range v2Txns {
 		reward = reward.Add(txn.MinerFee)
 	}
+	if (state.Index.Height + 1) >= state.Network.HardforkV2.FinalCutHeight {
+		reward = types.ZeroCurrency
+	}
 
 	b := types.Block{
 		ParentID:     state.Index.ID,
@@ -36,9 +40,9 @@ func mineBlock(state consensus.State, txns []types.Transaction, v2Txns []types.V
 			Height:       state.Index.Height + 1,
 		}
 		b.V2.Commitment = state.Commitment(b.MinerPayouts[0].Address, b.Transactions, b.V2Transactions())
-		for b.ID().CmpWork(state.ChildTarget) < 0 {
-			b.Nonce += state.NonceFactor()
-		}
+	}
+	for b.ID().CmpWork(state.PoWTarget()) < 0 {
+		b.Nonce += state.NonceFactor()
 	}
 	return b
 }

@@ -31,6 +31,7 @@ func newFuzzer(rng *rand.Rand, pk types.PrivateKey, allowHeight, requireHeight u
 	n, err := newTestChain(func(network *consensus.Network, genesisBlock types.Block) {
 		network.HardforkV2.AllowHeight = allowHeight
 		network.HardforkV2.RequireHeight = requireHeight
+		network.HardforkV2.FinalCutHeight = requireHeight + 50
 		genesisBlock.Transactions[0].SiacoinOutputs[0].Address = addr
 		genesisBlock.Transactions[0].SiafundOutputs[0].Address = addr
 	})
