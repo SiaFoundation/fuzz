@@ -225,9 +225,9 @@ func main() {
 	rootCmd.Usage = flagg.SimpleUsage(rootCmd, "Sia core fuzzer")
 
 	fuzzCmd := flagg.New("fuzz", "Randomly generate blocks")
-	allowHeight := fuzzCmd.Uint64("allowHeight", 250, "v2 hardfork allow height")
-	requireHeight := fuzzCmd.Uint64("requireHeight", 400, "v2 hardfork require height")
-	blocks := fuzzCmd.Uint64("blocks", 500, "number of blocks to randomly generate")
+	allowHeight := fuzzCmd.Uint64("allowHeight", 100, "v2 hardfork allow height")
+	requireHeight := fuzzCmd.Uint64("requireHeight", 150, "v2 hardfork require height")
+	blocks := fuzzCmd.Uint64("blocks", 250, "number of blocks to randomly generate")
 
 	reproCmd := flagg.New("repro", "Reproduce crash")
 
