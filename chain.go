@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"log"
 	"math"
 	"time"
 
@@ -12,6 +11,11 @@ import (
 	"go.sia.tech/coreutils/chain"
 	"go.sia.tech/coreutils/testutil"
 	"go.uber.org/zap"
+)
+
+var (
+	// blockTimestamp is the timestamp for all blocks
+	blockTimestamp = time.Date(2025, time.January, 0, 0, 0, 0, 0, time.UTC)
 )
 
 func mineBlock(state consensus.State, txns []types.Transaction, v2Txns []types.V2Transaction, minerAddr types.Address) types.Block {
@@ -24,13 +28,10 @@ func mineBlock(state consensus.State, txns []types.Transaction, v2Txns []types.V
 	for _, txn := range v2Txns {
 		reward = reward.Add(txn.MinerFee)
 	}
-	if (state.Index.Height + 1) >= state.Network.HardforkV2.FinalCutHeight {
-		reward = types.ZeroCurrency
-	}
 
 	b := types.Block{
 		ParentID:     state.Index.ID,
-		Timestamp:    time.Date(2025, time.January, 0, 0, 0, 0, 0, time.UTC),
+		Timestamp:    blockTimestamp,
 		Transactions: txns,
 		MinerPayouts: []types.SiacoinOutput{{Address: minerAddr, Value: reward}},
 	}
@@ -62,6 +63,7 @@ func newTestChain(modifyGenesis func(*consensus.Network, types.Block)) (*testCha
 	if modifyGenesis != nil {
 		modifyGenesis(network, genesisBlock)
 	}
+	genesisBlock.Timestamp = blockTimestamp
 
 	db, err := coreutils.OpenBoltChainDB("consensus.db")
 	if err != nil {
