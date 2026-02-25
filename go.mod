@@ -1,6 +1,6 @@
 module go.sia.tech/fuzzer
 
-go 1.24.1
+go 1.26.0
 
 require (
 	go.sia.tech/core v0.17.3
