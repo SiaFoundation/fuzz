@@ -80,18 +80,19 @@ func fuzzCommand(allowHeight, requireHeight, blocks uint64) error {
 			log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(f.n.tipState()))
 
 			s.Blocks = append(s.Blocks, b)
+			sp := f.n.store.Scratchpad()
 
-			bs1 := f.n.store.SupplementTipBlock(types.Block{})
+			bs1 := sp.SupplementTipBlock(types.Block{})
 			if err := f.applyBlock(b); err != nil {
 				return fmt.Errorf("failed to apply block: %w", err)
 			}
-			bs2 := f.n.store.SupplementTipBlock(types.Block{})
+			bs2 := sp.SupplementTipBlock(types.Block{})
 			f.revertBlock()
-			bs3 := f.n.store.SupplementTipBlock(types.Block{})
+			bs3 := sp.SupplementTipBlock(types.Block{})
 			if err := f.applyBlock(b); err != nil {
 				return fmt.Errorf("failed to re-apply block: %w", err)
 			}
-			bs4 := f.n.store.SupplementTipBlock(types.Block{})
+			bs4 := sp.SupplementTipBlock(types.Block{})
 
 			sortSupplement(&bs1)
 			sortSupplement(&bs2)
@@ -136,10 +137,12 @@ func reproCommand(path string) error {
 		return err
 	}
 
-	store, genesisState, err := chain.NewDBStore(chain.NewMemDB(), s.Network, s.Genesis, nil)
+	store, err := chain.NewDBStore(chain.NewMemDB(), s.Network, s.Genesis, nil)
 	if err != nil {
 		return err
 	}
+	sp := store.Scratchpad()
+	genesisState := sp.TipState()
 
 	blocks := []types.Block{s.Genesis}
 	supplements := []consensus.V1BlockSupplement{{Transactions: make([]consensus.V1TransactionSupplement, len(s.Genesis.Transactions))}}
@@ -147,7 +150,7 @@ func reproCommand(path string) error {
 
 	apply := func(b types.Block) error {
 		cs := states[len(states)-1]
-		bs := store.SupplementTipBlock(b)
+		bs := sp.SupplementTipBlock(b)
 		if cs.Index.Height != math.MaxUint64 {
 			// don't validate genesis block
 			if err := consensus.ValidateBlock(cs, b, bs); err != nil {
@@ -157,9 +160,9 @@ func reproCommand(path string) error {
 
 		cs, au := consensus.ApplyBlock(cs, b, bs, b.Timestamp)
 
-		store.AddState(cs)
-		store.AddBlock(b, &bs)
-		store.ApplyBlock(cs, au)
+		sp.AddState(cs)
+		sp.AddBlock(b, &bs)
+		sp.ApplyBlock(cs, au)
 
 		blocks = append(blocks, b)
 		supplements = append(supplements, bs)
@@ -175,7 +178,7 @@ func reproCommand(path string) error {
 
 		ru := consensus.RevertBlock(prevState, b, bs)
 
-		store.RevertBlock(prevState, ru)
+		sp.RevertBlock(prevState, ru)
 
 		blocks = blocks[:len(blocks)-1]
 		supplements = supplements[:len(supplements)-1]
@@ -186,17 +189,17 @@ func reproCommand(path string) error {
 		log.Println("Applying:", i)
 		log.Printf("Block ID: %v, current state: %v", b.ID(), stateHash(states[len(states)-1]))
 
-		bs1 := store.SupplementTipBlock(types.Block{})
+		bs1 := sp.SupplementTipBlock(types.Block{})
 		if err := apply(b); err != nil {
 			return fmt.Errorf("failed to apply block: %w", err)
 		}
-		bs2 := store.SupplementTipBlock(types.Block{})
+		bs2 := sp.SupplementTipBlock(types.Block{})
 		revert()
-		bs3 := store.SupplementTipBlock(types.Block{})
+		bs3 := sp.SupplementTipBlock(types.Block{})
 		if err := apply(b); err != nil {
 			return fmt.Errorf("failed to apply block: %w", err)
 		}
-		bs4 := store.SupplementTipBlock(types.Block{})
+		bs4 := sp.SupplementTipBlock(types.Block{})
 
 		sortSupplement(&bs1)
 		sortSupplement(&bs2)

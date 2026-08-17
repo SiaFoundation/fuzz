@@ -75,26 +75,28 @@ func newTestChain(modifyGenesis func(*consensus.Network, types.Block)) (*testCha
 		return nil, err
 	}
 
-	store, genesisState, err := chain.NewDBStore(db, network, genesisBlock, chain.NewZapMigrationLogger(log))
+	store, err := chain.NewDBStore(db, network, genesisBlock, chain.NewZapMigrationLogger(log))
 	if err != nil {
 		return nil, err
 	}
+	sp := store.Scratchpad()
+	genesisState := store.Scratchpad().TipState()
 
 	var blocks []types.Block
 	var supplements []consensus.V1BlockSupplement
 	states := []consensus.State{network.GenesisState()}
 	for i := uint64(0); i <= genesisState.Index.Height; i++ {
-		index, ok := store.BestIndex(i)
+		index, ok := sp.BestIndex(i)
 		if !ok {
 			return nil, errors.New("failed to get BestIndex")
 		}
-		b, bs, ok := store.Block(index.ID)
+		b, bs, ok := sp.Block(index.ID)
 		if !ok {
 			return nil, errors.New("failed to get Block")
 		} else if bs == nil {
 			bs = &consensus.V1BlockSupplement{Transactions: make([]consensus.V1TransactionSupplement, len(b.Transactions))}
 		}
-		cs, ok := store.State(index.ID)
+		cs, ok := sp.State(index.ID)
 		if !ok {
 			return nil, errors.New("failed to get State")
 		}
@@ -129,7 +131,8 @@ func (n *testChain) tip() types.ChainIndex {
 
 func (n *testChain) applyBlock(b types.Block) (consensus.ApplyUpdate, error) {
 	cs := n.tipState()
-	bs := n.store.SupplementTipBlock(b)
+	sp := n.store.Scratchpad()
+	bs := sp.SupplementTipBlock(b)
 	if (cs.Index.Height + 1) >= cs.Network.HardforkV2.RequireHeight {
 		bs = consensus.V1BlockSupplement{}
 	}
@@ -143,9 +146,9 @@ func (n *testChain) applyBlock(b types.Block) (consensus.ApplyUpdate, error) {
 
 	cs, au := consensus.ApplyBlock(cs, b, bs, b.Timestamp)
 
-	n.store.AddState(cs)
-	n.store.AddBlock(b, &bs)
-	n.store.ApplyBlock(cs, au)
+	sp.AddState(cs)
+	sp.AddBlock(b, &bs)
+	sp.ApplyBlock(cs, au)
 
 	n.blocks = append(n.blocks, b)
 	n.supplements = append(n.supplements, bs)
@@ -161,7 +164,7 @@ func (n *testChain) revertBlock() consensus.RevertUpdate {
 
 	ru := consensus.RevertBlock(prevState, b, bs)
 
-	n.store.RevertBlock(prevState, ru)
+	n.store.Scratchpad().RevertBlock(prevState, ru)
 
 	n.blocks = n.blocks[:len(n.blocks)-1]
 	n.supplements = n.supplements[:len(n.supplements)-1]
