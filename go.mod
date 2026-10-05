@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	go.sia.tech/core v0.21.7
-	go.sia.tech/coreutils v0.24.1
+	go.sia.tech/coreutils v0.25.0
 	go.uber.org/zap v1.28.0
 	lukechampine.com/flagg v1.1.1
 )
@@ -12,7 +12,7 @@ require (
 require (
 	github.com/dunglas/httpsfv v1.1.1 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
-	github.com/quic-go/quic-go v0.62.0 // indirect
+	github.com/quic-go/quic-go v0.63.0 // indirect
 	github.com/quic-go/webtransport-go v0.13.0 // indirect
 	go.etcd.io/bbolt v1.5.0 // indirect
 	go.sia.tech/mux v1.5.3 // indirect
