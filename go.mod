@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	go.sia.tech/core v0.21.8
-	go.sia.tech/coreutils v0.25.2
+	go.sia.tech/coreutils v0.25.3
 	go.uber.org/zap v1.28.0
 	lukechampine.com/flagg v1.1.1
 )
